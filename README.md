@@ -31,7 +31,7 @@ import "mc-bedrock-lib";
 
 - Extended prototypes for Player, Entity, World, Block, ItemStack, etc.
 - Utility classes: Vector2, Vector3, etc.
-- Custom afterEvents: entityJump, entitySneak, entityEquip, etc.
+- Custom events: entityJump, entitySneak, entityEquip, etc.
 - String parsing: `"@a[tag=admin]".toEQO()` `"12 34 56".toVector3()`
 - Helpers: arraysEqual, objectsEqual, Math.randomInt(min, max)
 
@@ -40,9 +40,9 @@ import "mc-bedrock-lib";
 ## Example
 
 ```js
-import { afterEvents, Vector3 } from "mc-bedrock-lib";
+import { world, Vector3 } from "mc-bedrock-lib";
 
-afterEvents.entityJump.subscribe((e) => {
+world.afterEvents.entityJump.subscribe((e) => {
   world.sendMessage(`${e.entity.typeId} jumped at ${e.entity.coordinates}`);
 });
 
