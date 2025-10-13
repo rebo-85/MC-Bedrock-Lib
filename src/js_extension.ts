@@ -1,12 +1,5 @@
-import { Vector3, Vector2 } from "./classes";
+import { Vector3, Vector2 } from "./classes/index";
 import { defineProperties } from "./utils";
-
-// Extend Math with randomInt
-declare global {
-  interface Math {
-    randomInt(min: number, max: number): number;
-  }
-}
 
 Math.randomInt = function (min: number, max: number): number {
   min = Math.ceil(min);
@@ -14,17 +7,6 @@ Math.randomInt = function (min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 };
 
-// Extend String prototype
-declare global {
-  interface String {
-    toTitleCase(): string;
-    toVector2(): Vector2 | undefined;
-    toVector3(): Vector3 | undefined;
-    toEQO(): Record<string, any> | undefined;
-  }
-}
-
-// String
 defineProperties(String.prototype, {
   toTitleCase: {
     value: function (): string {

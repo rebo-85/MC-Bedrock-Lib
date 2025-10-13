@@ -1,5 +1,5 @@
 import { Entity, Dimension, world } from "@minecraft/server";
-import { CommandResult } from "./classes";
+import { CommandResult } from "./interface";
 
 const entityRunCommand = Entity.prototype.runCommand;
 const dimensionRunCommand = Dimension.prototype.runCommand;
@@ -35,21 +35,17 @@ export function runCommand(
   source: typeof Entity | typeof Dimension,
   ...commands: string[] | string[][]
 ): CommandResult {
-  const result = new CommandResult();
+  let result = { successCount: 0 };
 
   const flattenedCommands = commands.flat();
 
   flattenedCommands.forEach((command) => {
     if (source === Entity) {
       const cr = entityRunCommand.call(this, command);
-      if (cr.successCount > 0) {
-        result.successCount++;
-      }
+      if (cr.successCount > 0) result.successCount++;
     } else if (source === Dimension) {
       const cr = dimensionRunCommand.call(this, command);
-      if (cr.successCount > 0) {
-        result.successCount++;
-      }
+      if (cr.successCount > 0) result.successCount++;
     }
   });
   return result;

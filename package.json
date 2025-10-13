@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "main": "dist/MC Bedrock Lib BP/scripts/mc_bedrock_lib.js",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --outfile=\"dist/MC Bedrock Lib BP/scripts/mc_bedrock_lib.js\" --format=esm --external:@minecraft/server --external:@minecraft/server-ui",
+    "build": "esbuild src/index.ts --bundle --outfile=\"dist/mc_bedrock_lib.js\" --format=esm --external:@minecraft/server --external:@minecraft/server-ui",
     "dev": "nodemon --watch src --ext js,ts --exec \"npm run build\""
   },
   "description": "Utility library for Minecraft Bedrock API",
@@ -19,5 +19,9 @@
     "esbuild": "^0.25.10",
     "nodemon": "^3.1.10",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@minecraft/server": "^2.2.0",
+    "@minecraft/server-ui": "^2.0.0"
   }
 }

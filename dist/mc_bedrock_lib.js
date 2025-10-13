@@ -1,5 +1,9 @@
 // src/classes.ts
-import { EquipmentSlot, system as system2, world } from "@minecraft/server";
+import {
+  EquipmentSlot,
+  system as system2,
+  world
+} from "@minecraft/server";
 
 // src/constants.ts
 import {
@@ -16,42 +20,115 @@ var beforeEvents = w.beforeEvents;
 var scriptEvent = s.afterEvents.scriptEventReceive;
 
 // src/classes.ts
-var ScriptEventManager = class {
-  constructor() {
-    this._events = /* @__PURE__ */ new Map();
+var Vector2 = class _Vector2 {
+  constructor(x, y) {
+    if (typeof x === "object" && x !== null && "x" in x && "y" in x) {
+      this.x = x.x;
+      this._y = x.y;
+      this.z = x.z !== void 0 ? x.z : x.y;
+    } else {
+      this.x = x;
+      this._y = y;
+      this.z = y;
+    }
   }
-  addEvent(eventName, callback) {
-    const event = system2.afterEvents.scriptEventReceive.subscribe((e) => {
-      if (e.id === eventName) {
-        callback(e);
+  set y(value) {
+    this._y = value;
+    this.z = value;
+  }
+  get y() {
+    return this._y;
+  }
+  toString() {
+    return `${this.x} ${this.y}`;
+  }
+  offset(x, y) {
+    if (typeof x === "object" && x !== null && "x" in x && "y" in x) {
+      return new _Vector2(this.x + x.x, this.y + x.y);
+    }
+    return new _Vector2(this.x + x, this.y + y);
+  }
+  check(x, y) {
+    return this.x === x && this.y === y;
+  }
+  normalized() {
+    const length = Math.sqrt(this.x * this.x + this.y * this.y);
+    if (length === 0) return new _Vector2(0, 0);
+    return new _Vector2(this.x / length, this.y / length);
+  }
+};
+var Vector3 = class _Vector3 extends Vector2 {
+  constructor(x, y, z) {
+    if (typeof x === "string") {
+      const [sx, sy, sz] = x.split(" ").map(Number);
+      super(sx, sy);
+      this.z = sz;
+    } else if (typeof x === "object" && x !== null && "x" in x && "y" in x) {
+      super(x.x, x.y);
+      this.z = x.z !== void 0 ? x.z : x.y;
+    } else {
+      super(x, y);
+      this.z = z;
+    }
+  }
+  offset(x, y, z) {
+    if (typeof x === "object" && x !== null && "x" in x && "y" in x) {
+      if ("z" in x) {
+        return new _Vector3(this.x + x.x, this.y + x.y, this.z + (x.z !== void 0 ? x.z : x.y));
       }
-    });
-    this._events.set(eventName, event);
-  }
-  removeEvent(eventName) {
-    const event = this._events.get(eventName);
-    if (event) {
-      system2.afterEvents.scriptEventReceive.unsubscribe(event);
-      this._events.delete(eventName);
+      return new Vector2(this.x + x.x, this.y + x.y);
     }
-  }
-  clearEvents() {
-    for (const [eventName, event] of this._events) {
-      system2.afterEvents.scriptEventReceive.unsubscribe(event);
+    if (typeof z !== "undefined") {
+      return new _Vector3(this.x + x, this.y + y, this.z + z);
     }
-    this._events.clear();
+    return new Vector2(this.x + x, this.y + y);
   }
-};
-var CommandResult = class {
-  constructor() {
-    this.successCount = 0;
+  check(x, y, z) {
+    if (typeof z === "undefined") {
+      return this.x === x && this.y === y;
+    }
+    return this.x === x && this.y === y && this.z === z;
   }
-};
-var Fade = class {
-  constructor(fadeIn, fadeHold, fadeOut) {
-    this.fadeIn = fadeIn;
-    this.fadeHold = fadeHold;
-    this.fadeOut = fadeOut;
+  toVector2() {
+    return new Vector2(this.x, this.y);
+  }
+  toString() {
+    return `${this.x} ${this.y} ${this.z}`;
+  }
+  belowCenter() {
+    const x = this._roundToNearestHalf(this.x);
+    const y = this.y;
+    const z = this._roundToNearestHalf(this.z);
+    return new _Vector3(x, y, z);
+  }
+  center() {
+    const x = this._roundToNearestHalf(this.x);
+    const y = this._roundToNearestHalf(this.y);
+    const z = this._roundToNearestHalf(this.z);
+    return new _Vector3(x, y, z);
+  }
+  sizeCenter() {
+    const x = Math.floor(this.x / 2);
+    const y = Math.floor(this.z / 2);
+    const z = Math.floor(this.z / 2);
+    return new _Vector3(x, y, z);
+  }
+  sizeBelowCenter() {
+    const x = Math.floor(this.x / 2);
+    const y = 0;
+    const z = Math.floor(this.z / 2);
+    return new _Vector3(x, y, z);
+  }
+  _roundToNearestHalf(value) {
+    return Math.round(value * 2) / 2;
+  }
+  normalized() {
+    const len = Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+    if (len === 0) return new _Vector3(0, 0, 0);
+    return new _Vector3(this.x / len, this.y / len, this.z / len);
+  }
+  toVolume(vec) {
+    return new _Vector3(Math.abs(this.x - vec.x), Math.abs(this.y - vec.y), Math.abs(this.z - vec.z));
   }
 };
 var Event = class {
@@ -349,6 +426,142 @@ var PlayerOnLandAfterEventSignal = class extends EntityEventSignal {
     }
   }
 };
+var Run = class {
+  constructor() {
+    this._process = null;
+  }
+  dispose() {
+    system2.clearRun(this._process);
+  }
+};
+var RunInterval = class extends Run {
+  constructor(cb, interval = 1) {
+    super();
+    this._process = system2.runInterval(cb, interval);
+  }
+};
+var RunTimeOut = class extends Run {
+  constructor(cb, timeOut = 1) {
+    super();
+    this._process = system2.runTimeout(cb, timeOut);
+  }
+};
+var CountDownTimer = class {
+  constructor(durationInSeconds = 10, onEnd = () => {
+  }, onUpdate = () => {
+  }) {
+    this.minutes = 0;
+    this.seconds = "00";
+    this.timer = durationInSeconds;
+    this.process = new RunInterval(() => {
+      this.minutes = Math.floor(this.timer / 60);
+      this.seconds = this.timer % 60;
+      this.seconds = this.seconds < 10 ? "0" + this.seconds : this.seconds;
+      onUpdate(this.minutes, this.seconds);
+      if (--this.timer < -1) {
+        onEnd();
+        this.process.dispose();
+        return;
+      }
+    }, 20);
+  }
+  dispose() {
+    this.process.dispose();
+  }
+};
+var DebugStickInspector = class {
+  constructor() {
+    this._interval = new RunInterval(() => this._updatePlayers(), 1);
+  }
+  dispose() {
+    this._interval?.dispose();
+  }
+  _updatePlayers() {
+    for (const player of world.getAllPlayers()) {
+      const mainhand = player.getEquipment(EquipmentSlot.Mainhand);
+      if (!mainhand || mainhand.typeId !== "minecraft:debug_stick") continue;
+      let target = player.getEntitiesFromViewDirection({
+        includeLiquidBlocks: true,
+        includePassableBlocks: true
+      })[0];
+      if (!target) {
+        target = player.getBlockFromViewDirection({
+          includeLiquidBlocks: true,
+          includePassableBlocks: true,
+          maxDistance: 7
+        });
+      }
+      let actionBarText = "No selected Block/Entity";
+      if (target && "block" in target && target.block) {
+        const block = target.block;
+        actionBarText = {
+          rawtext: [
+            { text: `\xA7bBlock\xA7r: \xA7f${block.typeId}
+\xA7r` },
+            { text: `\xA7bFace\xA7r: \xA7f${target.face}
+\xA7r` },
+            { text: `\xA7bData\xA7r: \xA7f${JSON.stringify(block.permutation.getAllStates(), null, 2)}\xA7r` }
+          ]
+        };
+      } else if (target && "entity" in target && target.entity) {
+        const entity = target.entity;
+        const entityData = {
+          dynamicProperties: entity.getDynamicPropertyIds()
+        };
+        actionBarText = {
+          rawtext: [
+            { text: `\xA7bEntity\xA7r: \xA7f${entity.typeId}
+\xA7r` },
+            { text: `\xA7bHealth\xA7r: \xA7f${entity.health}/${entity.maxHealth}
+\xA7r` },
+            { text: `\xA7bFamilies\xA7r: \xA7f[${entity.getTypeFamilies()}]
+\xA7r` },
+            { text: `\xA7bData\xA7r: \xA7f${JSON.stringify(entityData, null, 2)}\xA7r` }
+          ]
+        };
+      }
+      player.setActionBar(actionBarText);
+    }
+  }
+};
+var ScriptEventManager = class {
+  constructor() {
+    this._events = /* @__PURE__ */ new Map();
+  }
+  addEvent(eventName, callback) {
+    const event = system2.afterEvents.scriptEventReceive.subscribe((e) => {
+      if (e.id === eventName) {
+        callback(e);
+      }
+    });
+    this._events.set(eventName, event);
+  }
+  removeEvent(eventName) {
+    const event = this._events.get(eventName);
+    if (event) {
+      system2.afterEvents.scriptEventReceive.unsubscribe(event);
+      this._events.delete(eventName);
+    }
+  }
+  clearEvents() {
+    for (const [eventName, event] of this._events) {
+      system2.afterEvents.scriptEventReceive.unsubscribe(event);
+    }
+    this._events.clear();
+  }
+};
+var CommandResult = class {
+  constructor() {
+    this.successCount = 0;
+  }
+};
+var Fade = class {
+  constructor(fadeIn, fadeHold, fadeOut) {
+    this.fadeIn = fadeIn;
+    this.fadeHold = fadeHold;
+    this.fadeOut = fadeOut;
+  }
+};
 var Scene = class {
   constructor(posStart, posEnd, rotStart, rotEnd, duration, fade, ease_type = "linear") {
     this.posStart = posStart;
@@ -358,6 +571,13 @@ var Scene = class {
     this.duration = duration;
     this.fade = fade;
     this.ease_type = ease_type;
+  }
+};
+var TimedCommand = class {
+  constructor(time, commands) {
+    this.time = time;
+    this.timeTick = time * tps;
+    this.commands = commands;
   }
 };
 var Cutscene = class {
@@ -434,167 +654,6 @@ var Cutscene = class {
     }
   }
 };
-var Run = class {
-  constructor() {
-    this._process = null;
-  }
-  dispose() {
-    system2.clearRun(this._process);
-  }
-};
-var RunInterval = class extends Run {
-  constructor(cb, interval = 1) {
-    super();
-    this._process = system2.runInterval(cb, interval);
-  }
-};
-var RunTimeOut = class extends Run {
-  constructor(cb, timeOut = 1) {
-    super();
-    this._process = system2.runTimeout(cb, timeOut);
-  }
-};
-var Vector2 = class _Vector2 {
-  constructor(x, y) {
-    if (typeof x === "object" && x !== null && "x" in x && "y" in x) {
-      this.x = x.x;
-      this._y = x.y;
-      this.z = x.z !== void 0 ? x.z : x.y;
-    } else {
-      this.x = x;
-      this._y = y;
-      this.z = y;
-    }
-  }
-  set y(value) {
-    this._y = value;
-    this.z = value;
-  }
-  get y() {
-    return this._y;
-  }
-  toString() {
-    return `${this.x} ${this.y}`;
-  }
-  offset(x, y) {
-    if (typeof x === "object" && x !== null && "x" in x && "y" in x) {
-      return new _Vector2(this.x + x.x, this.y + x.y);
-    }
-    return new _Vector2(this.x + x, this.y + y);
-  }
-  check(x, y) {
-    return this.x === x && this.y === y;
-  }
-  normalized() {
-    const length = Math.sqrt(this.x * this.x + this.y * this.y);
-    if (length === 0) return new _Vector2(0, 0);
-    return new _Vector2(this.x / length, this.y / length);
-  }
-};
-var Vector3 = class _Vector3 extends Vector2 {
-  constructor(x, y, z) {
-    if (typeof x === "string") {
-      const [sx, sy, sz] = x.split(" ").map(Number);
-      super(sx, sy);
-      this.z = sz;
-    } else if (typeof x === "object" && x !== null && "x" in x && "y" in x) {
-      super(x.x, x.y);
-      this.z = x.z !== void 0 ? x.z : x.y;
-    } else {
-      super(x, y);
-      this.z = z;
-    }
-  }
-  offset(x, y, z) {
-    if (typeof x === "object" && x !== null && "x" in x && "y" in x) {
-      if ("z" in x) {
-        return new _Vector3(this.x + x.x, this.y + x.y, this.z + (x.z !== void 0 ? x.z : x.y));
-      }
-      return new Vector2(this.x + x.x, this.y + x.y);
-    }
-    if (typeof z !== "undefined") {
-      return new _Vector3(this.x + x, this.y + y, this.z + z);
-    }
-    return new Vector2(this.x + x, this.y + y);
-  }
-  check(x, y, z) {
-    if (typeof z === "undefined") {
-      return this.x === x && this.y === y;
-    }
-    return this.x === x && this.y === y && this.z === z;
-  }
-  toVector2() {
-    return new Vector2(this.x, this.y);
-  }
-  toString() {
-    return `${this.x} ${this.y} ${this.z}`;
-  }
-  belowCenter() {
-    const x = this._roundToNearestHalf(this.x);
-    const y = this.y;
-    const z = this._roundToNearestHalf(this.z);
-    return new _Vector3(x, y, z);
-  }
-  center() {
-    const x = this._roundToNearestHalf(this.x);
-    const y = this._roundToNearestHalf(this.y);
-    const z = this._roundToNearestHalf(this.z);
-    return new _Vector3(x, y, z);
-  }
-  sizeCenter() {
-    const x = Math.floor(this.x / 2);
-    const y = Math.floor(this.z / 2);
-    const z = Math.floor(this.z / 2);
-    return new _Vector3(x, y, z);
-  }
-  sizeBelowCenter() {
-    const x = Math.floor(this.x / 2);
-    const y = 0;
-    const z = Math.floor(this.z / 2);
-    return new _Vector3(x, y, z);
-  }
-  _roundToNearestHalf(value) {
-    return Math.round(value * 2) / 2;
-  }
-  normalized() {
-    const len = Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
-    if (len === 0) return new _Vector3(0, 0, 0);
-    return new _Vector3(this.x / len, this.y / len, this.z / len);
-  }
-  toVolume(vec) {
-    return new _Vector3(Math.abs(this.x - vec.x), Math.abs(this.y - vec.y), Math.abs(this.z - vec.z));
-  }
-};
-var TimedCommand = class {
-  constructor(time, commands) {
-    this.time = time;
-    this.timeTick = time * tps;
-    this.commands = commands;
-  }
-};
-var CountDownTimer = class {
-  constructor(durationInSeconds = 10, onEnd = () => {
-  }, onUpdate = () => {
-  }) {
-    this.minutes = 0;
-    this.seconds = "00";
-    this.timer = durationInSeconds;
-    this.process = new RunInterval(() => {
-      this.minutes = Math.floor(this.timer / 60);
-      this.seconds = this.timer % 60;
-      this.seconds = this.seconds < 10 ? "0" + this.seconds : this.seconds;
-      onUpdate(this.minutes, this.seconds);
-      if (--this.timer < -1) {
-        onEnd();
-        this.process.dispose();
-        return;
-      }
-    }, 20);
-  }
-  dispose() {
-    this.process.dispose();
-  }
-};
 
 // src/extension.ts
 import {
@@ -609,7 +668,7 @@ import {
   World,
   Block,
   ItemComponentTypes,
-  ScriptEventCommandMessageAfterEvent,
+  ScriptEventCommandMessageAfterEvent as ScriptEventCommandMessageAfterEvent2,
   ScriptEventSource,
   EquipmentSlot as EquipmentSlot2,
   GameMode,
@@ -729,6 +788,11 @@ defineProperties(WorldAfterEvents2.prototype, {
       return new EntityJumpAfterEventSignal();
     }
   },
+  entitySneak: {
+    get: function() {
+      return new EntitySneakAfterEventSignal();
+    }
+  },
   entityStartJumping: {
     get: function() {
       return new EntityStartJumpingAfterEventSignal();
@@ -737,11 +801,6 @@ defineProperties(WorldAfterEvents2.prototype, {
   entityStopJumping: {
     get: function() {
       return new EntityStopJumpingAfterEventSignal();
-    }
-  },
-  entitySneak: {
-    get: function() {
-      return new EntitySneakAfterEventSignal();
     }
   },
   entityUnsneak: {
@@ -754,6 +813,11 @@ defineProperties(WorldAfterEvents2.prototype, {
       return new PlayerOnAirJumpAfterEventSignal();
     }
   },
+  playerOnEquip: {
+    get: function() {
+      return new PlayerOnEquipAfterEventSignal();
+    }
+  },
   playerOnLand: {
     get: function() {
       return new PlayerOnLandAfterEventSignal();
@@ -763,14 +827,15 @@ defineProperties(WorldAfterEvents2.prototype, {
     get: function() {
       return new PlayerOnUnequipAfterEventSignal();
     }
-  },
-  playerOnEquip: {
-    get: function() {
-      return new PlayerOnEquipAfterEventSignal();
-    }
   }
 });
 defineProperties(World.prototype, {
+  end: {
+    get: function() {
+      return this.getDimension("minecraft:the_end");
+    },
+    enumerable: true
+  },
   getEntities: {
     value: function(selector) {
       const entities = /* @__PURE__ */ new Set();
@@ -782,15 +847,9 @@ defineProperties(World.prototype, {
       return Array.from(entities);
     }
   },
-  players: {
+  nether: {
     get: function() {
-      return this.getAllPlayers();
-    },
-    enumerable: true
-  },
-  end: {
-    get: function() {
-      return this.getDimension("minecraft:the_end");
+      return this.getDimension("minecraft:nether");
     },
     enumerable: true
   },
@@ -800,17 +859,18 @@ defineProperties(World.prototype, {
     },
     enumerable: true
   },
-  nether: {
+  players: {
     get: function() {
-      return this.getDimension("minecraft:nether");
+      return this.getAllPlayers();
     },
     enumerable: true
   }
 });
 defineProperties(ItemStack2.prototype, {
-  isVanillaBlock: {
-    get: function() {
-      return !!BlockTypes.get(this.typeId);
+  addEnchantment: {
+    value: function(...enchantments) {
+      const enchantmentList = enchantments.flat();
+      enchantmentList.forEach((ench) => this.enchantableComponent?.addEnchantments(ench));
     }
   },
   compare: {
@@ -821,50 +881,6 @@ defineProperties(ItemStack2.prototype, {
       }
       return false;
     }
-  },
-  enchantableComponent: {
-    get: function() {
-      return this.getComponent(ItemComponentTypes.Enchantable);
-    },
-    enumerable: true
-  },
-  enchantmentSlots: {
-    get: function() {
-      return this.enchantableComponent?.slots;
-    },
-    enumerable: true
-  },
-  addEnchantment: {
-    value: function(...enchantments) {
-      const enchantmentList = enchantments.flat();
-      enchantmentList.forEach((ench) => this.enchantableComponent?.addEnchantments(ench));
-    }
-  },
-  getEnchantment: {
-    value: function(enchantmentType) {
-      return this.enchantableComponent?.getEnchantment(enchantmentType);
-    }
-  },
-  hasEnchantment: {
-    value: function(enchantmentType) {
-      return !!this.enchantableComponent?.hasEnchantment(enchantmentType);
-    }
-  },
-  removeEnchantment: {
-    value: function(enchantmentType) {
-      return this.enchantableComponent?.removeEnchantment(enchantmentType);
-    }
-  },
-  removeAllEnchantments: {
-    value: function() {
-      return this.enchantableComponent?.removeAllEnchantments();
-    }
-  },
-  durabilityComponent: {
-    get: function() {
-      return this.getComponent(ItemComponentTypes.Durability);
-    },
-    enumerable: true
   },
   durability: {
     get: function() {
@@ -882,6 +898,49 @@ defineProperties(ItemStack2.prototype, {
       dc.damage = dmg;
     },
     enumerable: true
+  },
+  durabilityComponent: {
+    get: function() {
+      return this.getComponent(ItemComponentTypes.Durability);
+    },
+    enumerable: true
+  },
+  enchantableComponent: {
+    get: function() {
+      return this.getComponent(ItemComponentTypes.Enchantable);
+    },
+    enumerable: true
+  },
+  enchantmentSlots: {
+    get: function() {
+      return this.enchantableComponent?.slots;
+    },
+    enumerable: true
+  },
+  getEnchantment: {
+    value: function(enchantmentType) {
+      return this.enchantableComponent?.getEnchantment(enchantmentType);
+    }
+  },
+  hasEnchantment: {
+    value: function(enchantmentType) {
+      return !!this.enchantableComponent?.hasEnchantment(enchantmentType);
+    }
+  },
+  isVanillaBlock: {
+    get: function() {
+      return !!BlockTypes.get(this.typeId);
+    }
+  },
+  removeAllEnchantments: {
+    value: function() {
+      return this.enchantableComponent?.removeAllEnchantments();
+    }
+  },
+  removeEnchantment: {
+    value: function(enchantmentType) {
+      return this.enchantableComponent?.removeEnchantment(enchantmentType);
+    }
   }
 });
 defineProperties(Block.prototype, {
@@ -919,29 +978,6 @@ defineProperties(Block.prototype, {
       return ofs.map(([dx, dy, dz]) => this.offset(new Vector3(dx, dy, dz))).filter((b) => b !== void 0);
     }
   },
-  getState: {
-    value: function(state) {
-      return this.permutation.getState(state);
-    }
-  },
-  setState: {
-    value: function(state, value) {
-      const perm = this.permutation.withState(state, value);
-      this.setPermutation(perm);
-    }
-  },
-  inventoryComponent: {
-    get: function() {
-      return this.getComponent(BlockComponentTypes.Inventory);
-    },
-    enumerable: true
-  },
-  inventory: {
-    get: function() {
-      return this.inventoryComponent?.container;
-    },
-    enumerable: true
-  },
   getItems: {
     value: function(typeId) {
       const items = /* @__PURE__ */ new Map();
@@ -955,23 +991,63 @@ defineProperties(Block.prototype, {
       }
       return items;
     }
-  }
-});
-defineProperties(Player2.prototype, {
-  isMortal: {
+  },
+  getState: {
+    value: function(state) {
+      return this.permutation.getState(state);
+    }
+  },
+  inventory: {
     get: function() {
-      return this.gamemode === GameMode.Survival || this.gamemode === GameMode.Adventure;
+      return this.inventoryComponent?.container;
     },
     enumerable: true
   },
+  inventoryComponent: {
+    get: function() {
+      return this.getComponent(BlockComponentTypes.Inventory);
+    },
+    enumerable: true
+  },
+  setState: {
+    value: function(state, value) {
+      const perm = this.permutation.withState(state, value);
+      this.setPermutation(perm);
+    }
+  }
+});
+defineProperties(Player2.prototype, {
   clearItem: {
     value: function(typeId, maxCount = "", data = -1) {
       this.runCommand(`clear @s ${typeId} ${data} ${maxCount}`);
     }
   },
-  isUsingItem: {
+  damageItem: {
+    value: function(slot, damage = 1) {
+      const eqSlot = this.equippableComponent?.getEquipmentSlot(slot);
+      const item = eqSlot?.getItem();
+      if (!item) return;
+      const unbreaking = item.getEnchantment({ id: "unbreakind" });
+      const unbreakingLevel = unbreaking ? unbreaking.level : 0;
+      const unbreakingChance = 1 / (unbreakingLevel + 1);
+      if (Math.random() < unbreakingChance && this.gamemode !== GameMode.Creative) {
+        item.durability -= damage;
+        if (item.durability <= 0) {
+          eqSlot?.setItem(void 0);
+          this.dimension.playSound("random.break", this.location);
+        } else {
+          eqSlot?.setItem(item);
+        }
+      }
+      return item;
+    }
+  },
+  gamemode: {
     get: function() {
-      return playersUsingItem.has(this.id);
+      return this.getGameMode();
+    },
+    set: function(gamemode) {
+      this.setGameMode(gamemode);
     },
     enumerable: true
   },
@@ -1000,37 +1076,31 @@ defineProperties(Player2.prototype, {
       return { equipments: eMap, inventory: iMap };
     }
   },
-  damageItem: {
-    value: function(slot, damage = 1) {
-      const eqSlot = this.equippableComponent?.getEquipmentSlot(slot);
-      const item = eqSlot?.getItem();
-      if (!item) return;
-      const unbreaking = item.getEnchantment({ id: "unbreakind" });
-      const unbreakingLevel = unbreaking ? unbreaking.level : 0;
-      const unbreakingChance = 1 / (unbreakingLevel + 1);
-      if (Math.random() < unbreakingChance && this.gamemode !== GameMode.Creative) {
-        item.durability -= damage;
-        if (item.durability <= 0) {
-          eqSlot?.setItem(void 0);
-          this.dimension.playSound("random.break", this.location);
-        } else {
-          eqSlot?.setItem(item);
-        }
-      }
-      return item;
-    }
-  },
-  stopSound: {
-    value: function(id) {
-      this.runCommand(`stopsound @s ${id}`);
-    }
-  },
-  gamemode: {
+  ipCamera: {
     get: function() {
-      return this.getGameMode();
+      return this.inputPermissions.isPermissionCategoryEnabled(InputPermissionCategory.Camera);
     },
-    set: function(gamemode) {
-      this.setGameMode(gamemode);
+    set: function(value) {
+      this.inputPermissions.setPermissionCategory(InputPermissionCategory.Camera, value);
+    }
+  },
+  ipMovement: {
+    get: function() {
+      return this.inputPermissions.isPermissionCategoryEnabled(InputPermissionCategory.Movement);
+    },
+    set: function(value) {
+      this.inputPermissions.setPermissionCategory(InputPermissionCategory.Movement, value);
+    }
+  },
+  isMortal: {
+    get: function() {
+      return this.gamemode === GameMode.Survival || this.gamemode === GameMode.Adventure;
+    },
+    enumerable: true
+  },
+  isUsingItem: {
+    get: function() {
+      return playersUsingItem.has(this.id);
     },
     enumerable: true
   },
@@ -1044,27 +1114,16 @@ defineProperties(Player2.prototype, {
       this.onScreenDisplay.setTitle(rawMessage, option);
     }
   },
-  ipMovement: {
-    get: function() {
-      return this.inputPermissions.isPermissionCategoryEnabled(InputPermissionCategory.Movement);
-    },
-    set: function(value) {
-      this.inputPermissions.setPermissionCategory(InputPermissionCategory.Movement, value);
-    }
-  },
-  ipCamera: {
-    get: function() {
-      return this.inputPermissions.isPermissionCategoryEnabled(InputPermissionCategory.Camera);
-    },
-    set: function(value) {
-      this.inputPermissions.setPermissionCategory(InputPermissionCategory.Camera, value);
+  stopSound: {
+    value: function(id) {
+      this.runCommand(`stopsound @s ${id}`);
     }
   }
 });
 defineProperties(Entity3.prototype, {
-  commandRun: {
-    value: function(...commands) {
-      return runCommand.call(this, Entity3, ...commands);
+  addItem: {
+    value: function(itemStack) {
+      this.inventory?.addItem(itemStack);
     }
   },
   chunk: {
@@ -1074,6 +1133,26 @@ defineProperties(Entity3.prototype, {
         Math.floor(this.y / 16),
         Math.floor(this.z / 16)
       );
+    }
+  },
+  commandRun: {
+    value: function(...commands) {
+      return runCommand.call(this, Entity3, ...commands);
+    }
+  },
+  coordinates: {
+    get: function() {
+      return new Vector3(
+        Math.floor(this.x),
+        Math.floor(this.y),
+        Math.floor(this.z)
+      );
+    },
+    enumerable: true
+  },
+  dispose: {
+    value: function() {
+      this.remove();
     }
   },
   effectAdd: {
@@ -1094,10 +1173,118 @@ defineProperties(Entity3.prototype, {
       }
     }
   },
-  sendMolang: {
-    value: function(molang) {
-      this.playAnimation("animation.common.look_at_target", { stopExpression: `${molang} return true;` });
+  equippableComponent: {
+    get: function() {
+      return this.getComponent(EntityComponentTypes.Equippable);
+    },
+    enumerable: true
+  },
+  getEquipment: {
+    value: function(slot) {
+      return this.equippableComponent?.getEquipment(slot);
     }
+  },
+  getFacingOffset: {
+    value: function(distance, offset = new Vector3(0, 0, 0)) {
+      const view_dir = new Vector3(this.vdx, this.vdy, this.vdz);
+      const right_dir = new Vector3(-view_dir.z, 0, view_dir.x);
+      const normalized_right_dir = right_dir.normalized();
+      const end = {
+        x: view_dir.x * distance + normalized_right_dir.x * offset.x + offset.z,
+        y: view_dir.y * distance + offset.y,
+        z: view_dir.z * distance + normalized_right_dir.z * offset.x + offset.z
+      };
+      const head_loc = new Vector3(this.hx, this.hy, this.hz);
+      return head_loc.offset(end.x, end.y, end.z);
+    }
+  },
+  headLocation: {
+    get: function() {
+      const hl = this.getHeadLocation();
+      return new Vector3(hl.x, hl.y, hl.z);
+    },
+    enumerable: true
+  },
+  health: {
+    get: function() {
+      return this.healthComponent?.currentValue || 0;
+    },
+    set: function(value) {
+      return this.healthComponent?.setCurrentValue(value);
+    },
+    enumerable: true
+  },
+  healthComponent: {
+    get: function() {
+      return this.getComponent(EntityComponentTypes.Health);
+    },
+    enumerable: true
+  },
+  hx: {
+    get: function() {
+      return this.headLocation.x;
+    },
+    enumerable: true
+  },
+  hy: {
+    get: function() {
+      return this.headLocation.y;
+    },
+    enumerable: true
+  },
+  hz: {
+    get: function() {
+      return this.headLocation.z;
+    },
+    enumerable: true
+  },
+  inventory: {
+    get: function() {
+      return this.inventoryComponent?.container;
+    },
+    enumerable: true
+  },
+  inventoryComponent: {
+    get: function() {
+      return this.getComponent(EntityComponentTypes.Inventory);
+    },
+    enumerable: true
+  },
+  isPlayer: {
+    get: function() {
+      return this.typeId === "minecraft:player";
+    },
+    enumerable: true
+  },
+  isRiding: {
+    get: function() {
+      return this.ridingComponent ? true : false;
+    },
+    enumerable: true
+  },
+  itemComponent: {
+    get: function() {
+      return this.getComponent(EntityComponentTypes.Item);
+    },
+    enumerable: true
+  },
+  maxHealth: {
+    get: function() {
+      return this.healthComponent?.effectiveMax || 0;
+    },
+    enumerable: true
+  },
+  missingHealth: {
+    get: function() {
+      return this.maxHealth - this.health;
+    },
+    enumerable: true
+  },
+  movementComponent: {
+    get: function() {
+      return this.getComponent(EntityComponentTypes.Movement);
+    },
+    enumerable: true
   },
   projectileComponent: {
     get: function() {
@@ -1114,34 +1301,9 @@ defineProperties(Entity3.prototype, {
       if (comp) comp.owner = entity;
     }
   },
-  itemComponent: {
+  ride: {
     get: function() {
-      return this.getComponent(EntityComponentTypes.Item);
-    },
-    enumerable: true
-  },
-  toItemStack: {
-    value: function() {
-      return this.itemComponent?.itemStack;
-    }
-  },
-  headLocation: {
-    get: function() {
-      const hl = this.getHeadLocation();
-      return new Vector3(hl.x, hl.y, hl.z);
-    },
-    enumerable: true
-  },
-  viewDirection: {
-    get: function() {
-      const v = this.getViewDirection();
-      return new Vector3(v.x, v.y, v.z);
-    },
-    enumerable: true
-  },
-  isPlayer: {
-    get: function() {
-      return this.typeId === "minecraft:player";
+      return this.ridingComponent?.entityRidingOn;
     },
     enumerable: true
   },
@@ -1151,23 +1313,19 @@ defineProperties(Entity3.prototype, {
     },
     enumerable: true
   },
-  ride: {
+  rotation: {
     get: function() {
-      return this.ridingComponent?.entityRidingOn;
+      return new Vector2(this.getRotation().x, this.getRotation().y);
+    },
+    set: function(rotation) {
+      this.setRotation(rotation);
     },
     enumerable: true
   },
-  isRiding: {
-    get: function() {
-      return this.ridingComponent ? true : false;
-    },
-    enumerable: true
-  },
-  movementComponent: {
-    get: function() {
-      return this.getComponent(EntityComponentTypes.Movement);
-    },
-    enumerable: true
+  setEquipment: {
+    value: function(slot, item) {
+      return this.equippableComponent?.setEquipment(slot, item);
+    }
   },
   speed: {
     get: function() {
@@ -1177,85 +1335,6 @@ defineProperties(Entity3.prototype, {
       return this.movementComponent?.setCurrentValue(value);
     },
     enumerable: true
-  },
-  getFacingOffset: {
-    value: function(distance, offset = new Vector3(0, 0, 0)) {
-      const view_dir = new Vector3(this.vdx, this.vdy, this.vdz);
-      const right_dir = new Vector3(-view_dir.z, 0, view_dir.x);
-      const normalized_right_dir = right_dir.normalized();
-      const end = {
-        x: view_dir.x * distance + normalized_right_dir.x * offset.x + offset.z,
-        y: view_dir.y * distance + offset.y,
-        z: view_dir.z * distance + normalized_right_dir.z * offset.x + offset.z
-      };
-      const head_loc = new Vector3(this.hx, this.hy, this.hz);
-      return head_loc.offset(end.x, end.y, end.z);
-    }
-  },
-  healthComponent: {
-    get: function() {
-      return this.getComponent(EntityComponentTypes.Health);
-    },
-    enumerable: true
-  },
-  health: {
-    get: function() {
-      return this.healthComponent?.currentValue || 0;
-    },
-    set: function(value) {
-      return this.healthComponent?.setCurrentValue(value);
-    },
-    enumerable: true
-  },
-  maxHealth: {
-    get: function() {
-      return this.healthComponent?.effectiveMax || 0;
-    },
-    enumerable: true
-  },
-  missingHealth: {
-    get: function() {
-      return this.maxHealth - this.health;
-    },
-    enumerable: true
-  },
-  dispose: {
-    value: function() {
-      this.remove();
-    }
-  },
-  equippableComponent: {
-    get: function() {
-      return this.getComponent(EntityComponentTypes.Equippable);
-    },
-    enumerable: true
-  },
-  getEquipment: {
-    value: function(slot) {
-      return this.equippableComponent?.getEquipment(slot);
-    }
-  },
-  setEquipment: {
-    value: function(slot, item) {
-      return this.equippableComponent?.setEquipment(slot, item);
-    }
-  },
-  inventoryComponent: {
-    get: function() {
-      return this.getComponent(EntityComponentTypes.Inventory);
-    },
-    enumerable: true
-  },
-  inventory: {
-    get: function() {
-      return this.inventoryComponent?.container;
-    },
-    enumerable: true
-  },
-  addItem: {
-    value: function(itemStack) {
-      this.inventory?.addItem(itemStack);
-    }
   },
   tameableComponent: {
     get: function() {
@@ -1271,14 +1350,16 @@ defineProperties(Entity3.prototype, {
       return this.tameableComponent?.tame(player);
     }
   },
-  rotation: {
+  typeFamilyComponent: {
     get: function() {
-      return new Vector2(this.getRotation().x, this.getRotation().y);
-    },
-    set: function(rotation) {
-      this.setRotation(rotation);
+      return this.getComponent(EntityComponentTypes.TypeFamily);
     },
     enumerable: true
+  },
+  toItemStack: {
+    value: function() {
+      return this.itemComponent?.itemStack;
+    }
   },
   velocity: {
     get: function() {
@@ -1286,16 +1367,14 @@ defineProperties(Entity3.prototype, {
     },
     enumerable: true
   },
-  coordinates: {
+  viewDirection: {
     get: function() {
-      return new Vector3(
-        Math.floor(this.x),
-        Math.floor(this.y),
-        Math.floor(this.z)
-      );
+      const v = this.getViewDirection();
+      return new Vector3(v.x, v.y, v.z);
     },
     enumerable: true
   },
+  // --- axis/coord shorthands ---
   cx: {
     get: function() {
       return this.coordinates.x;
@@ -1366,24 +1445,6 @@ defineProperties(Entity3.prototype, {
       const rotation = this.rotation;
       rotation.y = ry;
       this.setRotation(rotation);
-    },
-    enumerable: true
-  },
-  hx: {
-    get: function() {
-      return this.headLocation.x;
-    },
-    enumerable: true
-  },
-  hy: {
-    get: function() {
-      return this.headLocation.y;
-    },
-    enumerable: true
-  },
-  hz: {
-    get: function() {
-      return this.headLocation.z;
     },
     enumerable: true
   },
@@ -1463,6 +1524,11 @@ defineProperties(Container.prototype, {
   }
 });
 defineProperties(BlockPermutation.prototype, {
+  getState: {
+    value: function(state) {
+      return this.getAllStates()[state];
+    }
+  },
   setState: {
     value: function(state, value) {
       return BlockPermutation.resolve(this.type.id, {
@@ -1470,14 +1536,9 @@ defineProperties(BlockPermutation.prototype, {
         [state]: value
       });
     }
-  },
-  getState: {
-    value: function(state) {
-      return this.getAllStates()[state];
-    }
   }
 });
-defineProperties(ScriptEventCommandMessageAfterEvent.prototype, {
+defineProperties(ScriptEventCommandMessageAfterEvent2.prototype, {
   source: {
     get: function() {
       switch (this.sourceType) {
@@ -1495,6 +1556,11 @@ defineProperties(ScriptEventCommandMessageAfterEvent.prototype, {
   }
 });
 defineProperties(Dimension2.prototype, {
+  commandRun: {
+    value: function(...commands) {
+      return runCommand.call(this, Dimension2, ...commands);
+    }
+  },
   weather: {
     get: function() {
       const eventId = world4.getTimeOfDay();
@@ -1511,11 +1577,6 @@ defineProperties(Dimension2.prototype, {
     },
     set: function(v) {
       this.setWeather(v.type, v.duration);
-    }
-  },
-  commandRun: {
-    value: function(...commands) {
-      return runCommand.call(this, Dimension2, ...commands);
     }
   }
 });
@@ -1699,6 +1760,7 @@ export {
   CommandResult,
   CountDownTimer,
   Cutscene,
+  DebugStickInspector,
   EntityAfterEvent,
   EntityEventSignal,
   EntityItemEventSignal,

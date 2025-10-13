@@ -34,9 +34,10 @@ import {
   EntityHealthComponent,
   EntityEquippableComponent,
   EntityTameableComponent,
+  RawMessage,
+  EntityTypeFamilyComponent,
 } from "@minecraft/server";
 import {
-  Vector2,
   EntityJumpAfterEventSignal,
   EntityStartJumpingAfterEventSignal,
   EntityStopJumpingAfterEventSignal,
@@ -46,9 +47,12 @@ import {
   PlayerOnLandAfterEventSignal,
   PlayerOnEquipAfterEventSignal,
   PlayerOnUnequipAfterEventSignal,
-  Vector3,
-  CommandResult,
-} from "./classes";
+} from "./classes/index";
+
+import { CommandResult } from "./interface";
+
+import { Vector3, Vector2 } from "./classes/index";
+
 import { runCommand, arraysEqual, defineProperties } from "./utils";
 import { playersUsingItem, weatherTracker } from "./events";
 
@@ -57,6 +61,11 @@ defineProperties(WorldAfterEvents.prototype, {
   entityJump: {
     get: function (): EntityJumpAfterEventSignal {
       return new EntityJumpAfterEventSignal();
+    },
+  },
+  entitySneak: {
+    get: function (): EntitySneakAfterEventSignal {
+      return new EntitySneakAfterEventSignal();
     },
   },
   entityStartJumping: {
@@ -69,11 +78,6 @@ defineProperties(WorldAfterEvents.prototype, {
       return new EntityStopJumpingAfterEventSignal();
     },
   },
-  entitySneak: {
-    get: function (): EntitySneakAfterEventSignal {
-      return new EntitySneakAfterEventSignal();
-    },
-  },
   entityUnsneak: {
     get: function (): EntityUnsneakAfterEventSignal {
       return new EntityUnsneakAfterEventSignal();
@@ -82,6 +86,11 @@ defineProperties(WorldAfterEvents.prototype, {
   playerOnAirJump: {
     get: function (): PlayerOnAirJumpAfterEventSignal {
       return new PlayerOnAirJumpAfterEventSignal();
+    },
+  },
+  playerOnEquip: {
+    get: function (): PlayerOnEquipAfterEventSignal {
+      return new PlayerOnEquipAfterEventSignal();
     },
   },
   playerOnLand: {
@@ -94,19 +103,20 @@ defineProperties(WorldAfterEvents.prototype, {
       return new PlayerOnUnequipAfterEventSignal();
     },
   },
-  playerOnEquip: {
-    get: function (): PlayerOnEquipAfterEventSignal {
-      return new PlayerOnEquipAfterEventSignal();
-    },
-  },
 });
 
+// World
 defineProperties(World.prototype, {
+  end: {
+    get: function (): Dimension {
+      return (this as World).getDimension("minecraft:the_end");
+    },
+    enumerable: true,
+  },
   getEntities: {
     value: function (selector?: any): Entity[] {
       const entities = new Set<Entity>();
       const dimTypes = DimensionTypes.getAll();
-
       dimTypes.forEach((type: any) => {
         const dim = (this as World).getDimension(type.typeId);
         dim?.getEntities(selector).forEach((e: Entity) => entities.add(e));
@@ -114,15 +124,9 @@ defineProperties(World.prototype, {
       return Array.from(entities);
     },
   },
-  players: {
-    get: function (): Player[] {
-      return (this as World).getAllPlayers();
-    },
-    enumerable: true,
-  },
-  end: {
+  nether: {
     get: function (): Dimension {
-      return (this as World).getDimension("minecraft:the_end");
+      return (this as World).getDimension("minecraft:nether");
     },
     enumerable: true,
   },
@@ -132,9 +136,9 @@ defineProperties(World.prototype, {
     },
     enumerable: true,
   },
-  nether: {
-    get: function (): Dimension {
-      return (this as World).getDimension("minecraft:nether");
+  players: {
+    get: function (): Player[] {
+      return (this as World).getAllPlayers();
     },
     enumerable: true,
   },
@@ -142,9 +146,10 @@ defineProperties(World.prototype, {
 
 // ItemStack
 defineProperties(ItemStack.prototype, {
-  isVanillaBlock: {
-    get: function (): boolean {
-      return !!BlockTypes.get((this as ItemStack).typeId);
+  addEnchantment: {
+    value: function (...enchantments: Enchantment[]): void {
+      const enchantmentList = enchantments.flat();
+      enchantmentList.forEach((ench: any) => (this as ItemStack).enchantableComponent?.addEnchantments(ench));
     },
   },
   compare: {
@@ -170,50 +175,6 @@ defineProperties(ItemStack.prototype, {
       return false;
     },
   },
-  enchantableComponent: {
-    get: function (): ItemEnchantableComponent | undefined {
-      return (this as ItemStack).getComponent(ItemComponentTypes.Enchantable);
-    },
-    enumerable: true,
-  },
-  enchantmentSlots: {
-    get: function (): EnchantmentSlot[] | undefined {
-      return (this as ItemStack).enchantableComponent?.slots;
-    },
-    enumerable: true,
-  },
-  addEnchantment: {
-    value: function (...enchantments: any[]): void {
-      const enchantmentList = enchantments.flat();
-      enchantmentList.forEach((ench: any) => (this as ItemStack).enchantableComponent?.addEnchantments(ench));
-    },
-  },
-  getEnchantment: {
-    value: function (enchantmentType: EnchantmentType): Enchantment | undefined {
-      return (this as ItemStack).enchantableComponent?.getEnchantment(enchantmentType);
-    },
-  },
-  hasEnchantment: {
-    value: function (enchantmentType: EnchantmentType): boolean {
-      return !!(this as ItemStack).enchantableComponent?.hasEnchantment(enchantmentType);
-    },
-  },
-  removeEnchantment: {
-    value: function (enchantmentType: EnchantmentType): void {
-      return (this as ItemStack).enchantableComponent?.removeEnchantment(enchantmentType);
-    },
-  },
-  removeAllEnchantments: {
-    value: function (): void {
-      return (this as ItemStack).enchantableComponent?.removeAllEnchantments();
-    },
-  },
-  durabilityComponent: {
-    get: function (): ItemDurabilityComponent | undefined {
-      return (this as ItemStack).getComponent(ItemComponentTypes.Durability);
-    },
-    enumerable: true,
-  },
   durability: {
     get: function (): number {
       return (this as ItemStack).durabilityComponent?.maxDurability ?? 0;
@@ -230,6 +191,49 @@ defineProperties(ItemStack.prototype, {
       dc.damage = dmg;
     },
     enumerable: true,
+  },
+  durabilityComponent: {
+    get: function (): ItemDurabilityComponent | undefined {
+      return (this as ItemStack).getComponent(ItemComponentTypes.Durability);
+    },
+    enumerable: true,
+  },
+  enchantableComponent: {
+    get: function (): ItemEnchantableComponent | undefined {
+      return (this as ItemStack).getComponent(ItemComponentTypes.Enchantable);
+    },
+    enumerable: true,
+  },
+  enchantmentSlots: {
+    get: function (): EnchantmentSlot[] | undefined {
+      return (this as ItemStack).enchantableComponent?.slots;
+    },
+    enumerable: true,
+  },
+  getEnchantment: {
+    value: function (enchantmentType: EnchantmentType): Enchantment | undefined {
+      return (this as ItemStack).enchantableComponent?.getEnchantment(enchantmentType);
+    },
+  },
+  hasEnchantment: {
+    value: function (enchantmentType: EnchantmentType): boolean {
+      return !!(this as ItemStack).enchantableComponent?.hasEnchantment(enchantmentType);
+    },
+  },
+  isVanillaBlock: {
+    get: function (): boolean {
+      return !!BlockTypes.get((this as ItemStack).typeId);
+    },
+  },
+  removeAllEnchantments: {
+    value: function (): void {
+      return (this as ItemStack).enchantableComponent?.removeAllEnchantments();
+    },
+  },
+  removeEnchantment: {
+    value: function (enchantmentType: EnchantmentType): void {
+      return (this as ItemStack).enchantableComponent?.removeEnchantment(enchantmentType);
+    },
   },
 });
 
@@ -271,29 +275,6 @@ defineProperties(Block.prototype, {
         .filter((b): b is Block => b !== undefined);
     },
   },
-  getState: {
-    value: function (state: string): any {
-      return (this as Block).permutation.getState(state as any);
-    },
-  },
-  setState: {
-    value: function (state: string, value: any): void {
-      const perm = (this as Block).permutation.withState(state as any, value);
-      (this as Block).setPermutation(perm);
-    },
-  },
-  inventoryComponent: {
-    get: function (): BlockInventoryComponent | undefined {
-      return (this as Block).getComponent(BlockComponentTypes.Inventory);
-    },
-    enumerable: true,
-  },
-  inventory: {
-    get: function (): Container | undefined {
-      return (this as Block).inventoryComponent?.container;
-    },
-    enumerable: true,
-  },
   getItems: {
     value: function (typeId?: string): Map<number, ItemStack> {
       const items = new Map<number, ItemStack>();
@@ -308,24 +289,65 @@ defineProperties(Block.prototype, {
       return items;
     },
   },
+  getState: {
+    value: function (state: string): any {
+      return (this as Block).permutation.getState(state as any);
+    },
+  },
+  inventory: {
+    get: function (): Container | undefined {
+      return (this as Block).inventoryComponent?.container;
+    },
+    enumerable: true,
+  },
+  inventoryComponent: {
+    get: function (): BlockInventoryComponent | undefined {
+      return (this as Block).getComponent(BlockComponentTypes.Inventory);
+    },
+    enumerable: true,
+  },
+  setState: {
+    value: function (state: string, value: any): void {
+      const perm = (this as Block).permutation.withState(state as any, value);
+      (this as Block).setPermutation(perm);
+    },
+  },
 });
 
 // Player
 defineProperties(Player.prototype, {
-  isMortal: {
-    get: function (): boolean {
-      return (this as Player).gamemode === GameMode.Survival || (this as Player).gamemode === GameMode.Adventure;
-    },
-    enumerable: true,
-  },
   clearItem: {
     value: function (typeId: string, maxCount: string = "", data: number = -1): void {
       (this as Player).runCommand(`clear @s ${typeId} ${data} ${maxCount}`);
     },
   },
-  isUsingItem: {
-    get: function (): boolean {
-      return playersUsingItem.has((this as Player).id);
+  damageItem: {
+    value: function (slot: EquipmentSlot, damage: number = 1): ItemStack | undefined {
+      // unbreaking
+      const eqSlot = (this as Player).equippableComponent?.getEquipmentSlot(slot);
+      const item = eqSlot?.getItem();
+      if (!item) return;
+      const unbreaking = item.getEnchantment({ id: "unbreakind" } as EnchantmentType);
+      const unbreakingLevel = unbreaking ? unbreaking.level : 0;
+      const unbreakingChance = 1 / (unbreakingLevel + 1);
+      if (Math.random() < unbreakingChance && (this as Player).gamemode !== GameMode.Creative) {
+        item.durability -= damage;
+        if (item.durability <= 0) {
+          eqSlot?.setItem(undefined);
+          (this as Player).dimension.playSound("random.break", (this as Player).location);
+        } else {
+          eqSlot?.setItem(item);
+        }
+      }
+      return item;
+    },
+  },
+  gamemode: {
+    get: function (): GameMode {
+      return (this as Player).getGameMode();
+    },
+    set: function (gamemode: GameMode) {
+      (this as Player).setGameMode(gamemode);
     },
     enumerable: true,
   },
@@ -333,7 +355,6 @@ defineProperties(Player.prototype, {
     value: function (typeId?: string): { equipments: Map<string, ItemStack>; inventory: Map<number, ItemStack> } {
       const eMap = new Map<string, ItemStack>();
       const slots: string[] = Object.values(EquipmentSlot).filter((value) => typeof value === "string");
-
       for (const slot of slots) {
         const item = (this as Player).getEquipment(slot as EquipmentSlot);
         if (item) {
@@ -355,48 +376,12 @@ defineProperties(Player.prototype, {
       return { equipments: eMap, inventory: iMap };
     },
   },
-  damageItem: {
-    value: function (slot: EquipmentSlot, damage: number = 1): ItemStack | undefined {
-      const eqSlot = (this as Player).equippableComponent?.getEquipmentSlot(slot);
-      const item = eqSlot?.getItem();
-      if (!item) return;
-      const unbreaking = item.getEnchantment({ id: "unbreakind" } as EnchantmentType);
-      const unbreakingLevel = unbreaking ? unbreaking.level : 0;
-      const unbreakingChance = 1 / (unbreakingLevel + 1);
-      if (Math.random() < unbreakingChance && (this as Player).gamemode !== GameMode.Creative) {
-        item.durability -= damage;
-        if (item.durability <= 0) {
-          eqSlot?.setItem(undefined);
-          (this as Player).dimension.playSound("random.break", (this as Player).location);
-        } else {
-          eqSlot?.setItem(item);
-        }
-      }
-      return item;
+  ipCamera: {
+    get: function (): boolean {
+      return (this as Player).inputPermissions.isPermissionCategoryEnabled(InputPermissionCategory.Camera);
     },
-  },
-  stopSound: {
-    value: function (id: string): void {
-      (this as Player).runCommand(`stopsound @s ${id}`);
-    },
-  },
-  gamemode: {
-    get: function (): GameMode {
-      return (this as Player).getGameMode();
-    },
-    set: function (gamemode: GameMode) {
-      (this as Player).setGameMode(gamemode);
-    },
-    enumerable: true,
-  },
-  setActionBar: {
-    value: function (rawMessage: string): void {
-      (this as Player).onScreenDisplay.setActionBar(rawMessage);
-    },
-  },
-  setTitle: {
-    value: function (rawMessage: string, option?: any): void {
-      (this as Player).onScreenDisplay.setTitle(rawMessage, option);
+    set: function (value: boolean) {
+      (this as Player).inputPermissions.setPermissionCategory(InputPermissionCategory.Camera, value);
     },
   },
   ipMovement: {
@@ -407,21 +392,94 @@ defineProperties(Player.prototype, {
       (this as Player).inputPermissions.setPermissionCategory(InputPermissionCategory.Movement, value);
     },
   },
-  ipCamera: {
+  isMortal: {
     get: function (): boolean {
-      return (this as Player).inputPermissions.isPermissionCategoryEnabled(InputPermissionCategory.Camera);
+      return (this as Player).gamemode === GameMode.Survival || (this as Player).gamemode === GameMode.Adventure;
     },
-    set: function (value: boolean) {
-      (this as Player).inputPermissions.setPermissionCategory(InputPermissionCategory.Camera, value);
+    enumerable: true,
+  },
+  isUsingItem: {
+    get: function (): boolean {
+      return playersUsingItem.has((this as Player).id);
+    },
+    enumerable: true,
+  },
+  setActionBar: {
+    value: function (rawMessage: string | RawMessage): void {
+      (this as Player).onScreenDisplay.setActionBar(rawMessage);
+    },
+  },
+  setTitle: {
+    value: function (rawMessage: string, option?: any): void {
+      (this as Player).onScreenDisplay.setTitle(rawMessage, option);
+    },
+  },
+  stopSound: {
+    value: function (id: string): void {
+      (this as Player).runCommand(`stopsound @s ${id}`);
     },
   },
 });
 
-// Define Entity methods
+// Entity
 defineProperties(Entity.prototype, {
-  commandRun: {
-    value: function (...commands: string[]): CommandResult {
-      return runCommand.call(this as Entity, Entity, ...commands);
+  equippableComponent: {
+    get: function (): EntityEquippableComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Equippable);
+    },
+    enumerable: true,
+  },
+  healthComponent: {
+    get: function (): EntityHealthComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Health);
+    },
+    enumerable: true,
+  },
+  inventoryComponent: {
+    get: function (): EntityInventoryComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Inventory);
+    },
+    enumerable: true,
+  },
+  itemComponent: {
+    get: function (): EntityItemComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Item);
+    },
+    enumerable: true,
+  },
+  movementComponent: {
+    get: function (): EntityMovementComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Movement);
+    },
+    enumerable: true,
+  },
+  projectileComponent: {
+    get: function (): EntityProjectileComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Projectile);
+    },
+    enumerable: true,
+  },
+  tameableComponent: {
+    get: function (): EntityTameableComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Tameable);
+    },
+    enumerable: true,
+  },
+  typeFamilyComponent: {
+    get: function (): EntityTypeFamilyComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.TypeFamily);
+    },
+    enumerable: true,
+  },
+  //
+  typeFamilies: {
+    get: function (): string[] {
+      return (this as Entity).typeFamilyComponent?.getTypeFamilies() ?? [];
+    },
+  },
+  addItem: {
+    value: function (itemStack: ItemStack): void {
+      (this as Entity).inventory?.addItem(itemStack);
     },
   },
   chunk: {
@@ -431,6 +489,34 @@ defineProperties(Entity.prototype, {
         Math.floor((this as Entity).y / 16),
         Math.floor((this as Entity).z / 16)
       );
+    },
+  },
+  commandRun: {
+    value: function (...commands: string[]): any {
+      let result = { successCount: 0 };
+
+      const flattenedCommands = commands.flat();
+
+      flattenedCommands.forEach((command) => {
+        const cr = (this as Entity).runCommand(command);
+        if (cr.successCount > 0) result.successCount++;
+      });
+      return result;
+    },
+  },
+  coordinates: {
+    get: function (): Vector3 {
+      return new Vector3(
+        Math.floor((this as Entity).x),
+        Math.floor((this as Entity).y),
+        Math.floor((this as Entity).z)
+      );
+    },
+    enumerable: true,
+  },
+  dispose: {
+    value: function (): void {
+      (this as Entity).remove();
     },
   },
   effectAdd: {
@@ -456,92 +542,14 @@ defineProperties(Entity.prototype, {
       }
     },
   },
-  sendMolang: {
-    value: function (molang: string): void {
-      (this as Entity).playAnimation("animation.common.look_at_target", { stopExpression: `${molang} return true;` });
+  getEquipment: {
+    value: function (slot: EquipmentSlot): ItemStack | undefined {
+      return (this as Entity).equippableComponent?.getEquipment(slot);
     },
-  },
-  projectileComponent: {
-    get: function (): EntityProjectileComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Projectile);
-    },
-    enumerable: true,
-  },
-  projectileOwner: {
-    get: function (): Entity | undefined {
-      return (this as Entity).projectileComponent?.owner;
-    },
-    set: function (entity: Entity) {
-      const comp = (this as Entity).projectileComponent;
-      if (comp) comp.owner = entity;
-    },
-  },
-  itemComponent: {
-    get: function (): EntityItemComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Item);
-    },
-    enumerable: true,
-  },
-  toItemStack: {
-    value: function (): ItemStack | undefined {
-      return (this as Entity).itemComponent?.itemStack;
-    },
-  },
-  headLocation: {
-    get: function (): Vector3 {
-      const hl = (this as Entity).getHeadLocation();
-      return new Vector3(hl.x, hl.y, hl.z);
-    },
-    enumerable: true,
-  },
-  viewDirection: {
-    get: function (): Vector3 {
-      const v = (this as Entity).getViewDirection();
-      return new Vector3(v.x, v.y, v.z);
-    },
-    enumerable: true,
-  },
-  isPlayer: {
-    get: function (): boolean {
-      return (this as Entity).typeId === "minecraft:player";
-    },
-    enumerable: true,
-  },
-  ridingComponent: {
-    get: function (): EntityRidingComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Riding);
-    },
-    enumerable: true,
-  },
-  ride: {
-    get: function (): Entity | undefined {
-      return (this as Entity).ridingComponent?.entityRidingOn;
-    },
-    enumerable: true,
-  },
-  isRiding: {
-    get: function (): boolean {
-      return (this as Entity).ridingComponent ? true : false;
-    },
-    enumerable: true,
-  },
-  movementComponent: {
-    get: function (): EntityMovementComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Movement);
-    },
-    enumerable: true,
-  },
-  speed: {
-    get: function (): number {
-      return (this as Entity).movementComponent?.currentValue ?? 0;
-    },
-    set: function (value: number) {
-      return (this as Entity).movementComponent?.setCurrentValue(value);
-    },
-    enumerable: true,
   },
   getFacingOffset: {
     value: function (distance: number, offset: Vector3 = new Vector3(0, 0, 0)): Vector3 {
+      // offset from view dir
       const view_dir = new Vector3((this as Entity).vdx, (this as Entity).vdy, (this as Entity).vdz);
       const right_dir = new Vector3(-view_dir.z, 0, view_dir.x);
       const normalized_right_dir = right_dir.normalized();
@@ -554,9 +562,10 @@ defineProperties(Entity.prototype, {
       return head_loc.offset(end.x, end.y, end.z);
     },
   },
-  healthComponent: {
-    get: function (): EntityHealthComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Health);
+  headLocation: {
+    get: function (): Vector3 {
+      const hl = (this as Entity).getHeadLocation();
+      return new Vector3(hl.x, hl.y, hl.z);
     },
     enumerable: true,
   },
@@ -566,6 +575,42 @@ defineProperties(Entity.prototype, {
     },
     set: function (value: number) {
       return (this as Entity).healthComponent?.setCurrentValue(value);
+    },
+    enumerable: true,
+  },
+  hx: {
+    get: function (): number {
+      return (this as Entity).headLocation.x;
+    },
+    enumerable: true,
+  },
+  hy: {
+    get: function (): number {
+      return (this as Entity).headLocation.y;
+    },
+    enumerable: true,
+  },
+  hz: {
+    get: function (): number {
+      return (this as Entity).headLocation.z;
+    },
+    enumerable: true,
+  },
+  inventory: {
+    get: function (): Container | undefined {
+      return (this as Entity).inventoryComponent?.container;
+    },
+    enumerable: true,
+  },
+  isPlayer: {
+    get: function (): boolean {
+      return (this as Entity).typeId === "minecraft:player";
+    },
+    enumerable: true,
+  },
+  isRiding: {
+    get: function (): boolean {
+      return (this as Entity).ridingComponent ? true : false;
     },
     enumerable: true,
   },
@@ -581,47 +626,47 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true,
   },
-  dispose: {
-    value: function (): void {
-      (this as Entity).remove();
+  projectileOwner: {
+    get: function (): Entity | undefined {
+      return (this as Entity).projectileComponent?.owner;
+    },
+    set: function (entity: Entity) {
+      const comp = (this as Entity).projectileComponent;
+      if (comp) comp.owner = entity;
     },
   },
-  equippableComponent: {
-    get: function (): EntityEquippableComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Equippable);
+  ride: {
+    get: function (): Entity | undefined {
+      return (this as Entity).ridingComponent?.entityRidingOn;
     },
     enumerable: true,
   },
-  getEquipment: {
-    value: function (slot: EquipmentSlot): ItemStack | undefined {
-      return (this as Entity).equippableComponent?.getEquipment(slot);
+  ridingComponent: {
+    get: function (): EntityRidingComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Riding);
     },
+    enumerable: true,
+  },
+  rotation: {
+    get: function (): Vector2 {
+      return new Vector2((this as Entity).getRotation().x, (this as Entity).getRotation().y);
+    },
+    set: function (rotation: Vector2) {
+      (this as Entity).setRotation(rotation);
+    },
+    enumerable: true,
   },
   setEquipment: {
-    value: function (slot: EquipmentSlot, item: ItemStack): any {
+    value: function (slot: EquipmentSlot, item: ItemStack): boolean | undefined {
       return (this as Entity).equippableComponent?.setEquipment(slot, item);
     },
   },
-  inventoryComponent: {
-    get: function (): EntityInventoryComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Inventory);
+  speed: {
+    get: function (): number {
+      return (this as Entity).movementComponent?.currentValue ?? 0;
     },
-    enumerable: true,
-  },
-  inventory: {
-    get: function (): Container | undefined {
-      return (this as Entity).inventoryComponent?.container;
-    },
-    enumerable: true,
-  },
-  addItem: {
-    value: function (itemStack: ItemStack): void {
-      (this as Entity).inventory?.addItem(itemStack);
-    },
-  },
-  tameableComponent: {
-    get: function (): EntityTameableComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Tameable);
+    set: function (value: number) {
+      return (this as Entity).movementComponent?.setCurrentValue(value);
     },
     enumerable: true,
   },
@@ -633,14 +678,10 @@ defineProperties(Entity.prototype, {
       return (this as Entity).tameableComponent?.tame(player);
     },
   },
-  rotation: {
-    get: function (): Vector2 {
-      return new Vector2((this as Entity).getRotation().x, (this as Entity).getRotation().y);
+  toItemStack: {
+    value: function (): ItemStack | undefined {
+      return (this as Entity).itemComponent?.itemStack;
     },
-    set: function (rotation: Vector2) {
-      (this as Entity).setRotation(rotation);
-    },
-    enumerable: true,
   },
   velocity: {
     get: function (): Vector3 {
@@ -648,16 +689,14 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true,
   },
-  coordinates: {
+  viewDirection: {
     get: function (): Vector3 {
-      return new Vector3(
-        Math.floor((this as Entity).x),
-        Math.floor((this as Entity).y),
-        Math.floor((this as Entity).z)
-      );
+      const v = (this as Entity).getViewDirection();
+      return new Vector3(v.x, v.y, v.z);
     },
     enumerable: true,
   },
+  // axis/coord
   cx: {
     get: function (): number {
       return (this as Entity).coordinates.x;
@@ -731,24 +770,6 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true,
   },
-  hx: {
-    get: function (): number {
-      return (this as Entity).headLocation.x;
-    },
-    enumerable: true,
-  },
-  hy: {
-    get: function (): number {
-      return (this as Entity).headLocation.y;
-    },
-    enumerable: true,
-  },
-  hz: {
-    get: function (): number {
-      return (this as Entity).headLocation.z;
-    },
-    enumerable: true,
-  },
   vx: {
     get: function (): number {
       return (this as Entity).velocity.x;
@@ -787,6 +808,7 @@ defineProperties(Entity.prototype, {
   },
 });
 
+// Container
 defineProperties(Container.prototype, {
   forEachSlot: {
     value: function (cb: (slotObj: any, slotId: number) => void): void {
@@ -826,8 +848,13 @@ defineProperties(Container.prototype, {
   },
 });
 
-// BlockPermutation methods
+// BlockPermutation
 defineProperties(BlockPermutation.prototype, {
+  getState: {
+    value: function (state: string): any {
+      return (this as BlockPermutation).getAllStates()[state];
+    },
+  },
   setState: {
     value: function (state: string, value: any): BlockPermutation {
       return BlockPermutation.resolve((this as BlockPermutation).type.id, {
@@ -836,16 +863,13 @@ defineProperties(BlockPermutation.prototype, {
       });
     },
   },
-  getState: {
-    value: function (state: string): any {
-      return (this as BlockPermutation).getAllStates()[state];
-    },
-  },
 });
 
+// ScriptEventCommandMessageAfterEvent
 defineProperties(ScriptEventCommandMessageAfterEvent.prototype, {
   source: {
-    get: function (): any {
+    get: function (): Block | Entity | undefined {
+      // see extension.ts for getter logic
       switch ((this as ScriptEventCommandMessageAfterEvent).sourceType) {
         case ScriptEventSource.Block:
           return (this as ScriptEventCommandMessageAfterEvent).sourceBlock;
@@ -861,12 +885,26 @@ defineProperties(ScriptEventCommandMessageAfterEvent.prototype, {
   },
 });
 
+// Dimension
 defineProperties(Dimension.prototype, {
+  commandRun: {
+    value: function (...commands: string[]): any {
+      let result = { successCount: 0 };
+
+      const flattenedCommands = commands.flat();
+
+      flattenedCommands.forEach((command) => {
+        const cr = (this as Dimension).runCommand(command);
+        if (cr.successCount > 0) result.successCount++;
+      });
+      return result;
+    },
+  },
   weather: {
     get: function (): WeatherType | undefined {
+      // get current weather
       const eventId = world.getTimeOfDay();
       const weatherTypes: string[] = Object.values(WeatherType);
-
       for (const weatherType of weatherTypes) {
         (this as Dimension).setWeather(weatherType as WeatherType, eventId);
         if (weatherTracker.has(eventId)) {
@@ -879,11 +917,6 @@ defineProperties(Dimension.prototype, {
     },
     set: function (v: { type: WeatherType; duration: number }) {
       (this as Dimension).setWeather(v.type, v.duration);
-    },
-  },
-  commandRun: {
-    value: function (...commands: string[]): any {
-      return runCommand.call(this as Dimension, Dimension, ...commands);
     },
   },
 });

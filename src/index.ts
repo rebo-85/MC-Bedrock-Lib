@@ -1,5 +1,5 @@
 export * from "./classes";
 export * from "./constants";
-import "./extension";
+import "./mc_extension";
 export * from "./utils";
-import "./javascript";
+import "./js_extension";

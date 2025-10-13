@@ -8,15 +8,15 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "console": "integratedTerminal"
-    },
-    {
-      "type": "minecraft-js",
-      "request": "attach",
-      "name": "Debug with Minecraft",
-      "mode": "listen",
-      "targetModuleUuid": "e8a0ca80-63ee-4743-85c8-1ba432685b9d",
-      "localRoot": "${workspaceFolder}/dist/MC Bedrock Lib BP/scripts/",
-      "port": 19144
     }
+    // {
+    //   "type": "minecraft-js",
+    //   "request": "attach",
+    //   "name": "Debug with Minecraft",
+    //   "mode": "listen",
+    //   "targetModuleUuid": "e8a0ca80-63ee-4743-85c8-1ba432685b9d",
+    //   "localRoot": "${workspaceFolder}/dist/MC Bedrock Lib BP/scripts/",
+    //   "port": 19144
+    // }
   ]
 }

@@ -25,7 +25,19 @@ import {
   CommandResult,
 } from "./classes";
 
-// World extensions
+declare global {
+  interface String {
+    toTitleCase(): string;
+    toVector2(): Vector2 | undefined;
+    toVector3(): Vector3 | undefined;
+    toEQO(): Record<string, any> | undefined;
+  }
+
+  interface Math {
+    randomInt(min: number, max: number): number;
+  }
+}
+
 declare module "@minecraft/server" {
   interface World {
     getEntities(selector?: any): Entity[];
@@ -52,9 +64,9 @@ declare module "@minecraft/server" {
     getItems(typeId?: string): { equipments: Map<string, ItemStack>; inventory: Map<number, ItemStack> };
     damageItem(slot: EquipmentSlot, damage?: number): ItemStack | undefined;
     stopSound(id: string): void;
-    gamemode: any;
+    gamemode: GameMode;
     inventory: Container;
-    setActionBar(rawMessage: string): void;
+    setActionBar(rawMessage: string | RawMessage): void;
     setTitle(rawMessage: string, option?: any): void;
     ipMovement: boolean;
     ipCamera: boolean;
@@ -65,31 +77,34 @@ declare module "@minecraft/server" {
     effectAdd(effectName: string, durationInSeconds?: number, amplifier?: number, hideParticles?: boolean): void;
     effectClear(effectType?: string | null): void;
     sendMolang(molang: string): void;
-    readonly projectileComponent: any;
-    projectileOwner: Entity | undefined;
-    readonly itemComponent: any;
     toItemStack(): ItemStack | undefined;
+    readonly projectileComponent: EntityProjectileComponent | undefined;
+    readonly itemComponent: EntityItemComponent | undefined;
+    readonly ridingComponent: EntityRidingComponent | undefined;
+    readonly movementComponent: EntityMovementComponent | undefined;
+    readonly healthComponent: EntityHealthComponent | undefined;
+    readonly equippableComponent: EntityEquippableComponent | undefined;
+    readonly inventoryComponent: EntityInventoryComponent | undefined;
+    readonly typeFamilyComponent: EntityTypeFamilyComponent | undefined;
+    readonly tameableComponent: EntityTameableComponent;
+
+    readonly typeFamilies: string[];
     readonly headLocation: Vector3;
     readonly viewDirection: Vector3;
     readonly isPlayer: boolean;
-    readonly ridingComponent: any;
     readonly ride: Entity | undefined;
     readonly isRiding: boolean;
-    readonly movementComponent: any;
+    projectileOwner: Entity | undefined;
     speed: number;
     getFacingOffset(distance: number, offset?: Vector3): Vector3;
-    readonly healthComponent: any;
     health: number;
     readonly maxHealth: number;
     readonly missingHealth: number;
     dispose(): void;
-    readonly equippableComponent: any;
     getEquipment(slot: EquipmentSlot): ItemStack | undefined;
-    setEquipment(slot: EquipmentSlot, item: ItemStack): any;
-    readonly inventoryComponent: any;
+    setEquipment(slot: EquipmentSlot, item: ItemStack): boolean | undefined;
     readonly inventory: Container | undefined;
     addItem(itemStack: ItemStack): void;
-    readonly tameableComponent: any;
     tameOwner: Entity | undefined;
     rotation: Vector2;
     readonly velocity: Vector3;
@@ -115,18 +130,18 @@ declare module "@minecraft/server" {
   interface ItemStack {
     readonly isVanillaBlock: boolean;
     compare(itemStack: ItemStack | null | undefined): boolean;
-    readonly enchantableComponent: any;
-    readonly enchantmentSlots: any[] | undefined;
-    addEnchantment(...enchantments: any[]): void;
-    getEnchantment(enchantmentType: any): any | undefined;
-    hasEnchantment(enchantmentType: any): boolean;
-    removeEnchantment(enchantmentType: any): void;
+    readonly enchantableComponent: ItemEnchantableComponent;
+    readonly enchantmentSlots: EnchantmentSlot[] | undefined;
+    addEnchantment(...enchantments: Enchantment[]): void;
+    getEnchantment(enchantmentType: EnchantmentType): Enchantment | undefined;
+    hasEnchantment(enchantmentType: EnchantmentType): boolean;
+    removeEnchantment(enchantmentType: EnchantmentType): void;
     removeAllEnchantments(): void;
-    readonly durabilityComponent: any;
+    readonly durabilityComponent: ItemDurabilityComponent;
     durability: number;
   }
   interface Container {
-    forEachSlot(cb: (slotObj: any, slotId: number) => void): void;
+    forEachSlot(cb: (slotObj: ContainerSlot, slotId: number) => void): void;
     getItems(): Map<number, ItemStack>;
     sort(cb: (a: ItemStack, b: ItemStack) => number): void;
   }
@@ -144,6 +159,10 @@ declare module "@minecraft/server" {
   }
   interface Dimension {
     weather: WeatherType | { type: WeatherType; duration: number } | undefined;
-    commandRun(...commands: string[]): any;
+    commandRun(...commands: string[]): CommandResult;
+  }
+
+  interface ScriptEventCommandMessageAfterEvent {
+    readonly source: Block | Entity | undefined;
   }
 }
