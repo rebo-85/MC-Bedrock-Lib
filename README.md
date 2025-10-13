@@ -21,6 +21,8 @@ After building, use the files in the `dist` folder and import them in your packs
 import * as mbl from "mc-bedrock-lib";
 // or
 import { Vector3, Cutscene, world, system } from "mc-bedrock-lib";
+// or
+import "mc-bedrock-lib";
 ```
 
 ---
@@ -31,7 +33,7 @@ import { Vector3, Cutscene, world, system } from "mc-bedrock-lib";
 - Utility classes: Vector2, Vector3, etc.
 - Custom afterEvents: entityJump, entitySneak, entityEquip, etc.
 - String parsing: `"@a[tag=admin]".toEQO()` `"12 34 56".toVector3()`
-- Helpers: defineProperties, arraysEqual, generateUUIDv4, Math.randomInt(min, max)
+- Helpers: arraysEqual, objectsEqual, Math.randomInt(min, max)
 
 ---
 
@@ -50,21 +52,7 @@ const pos = new Vector3(10, 64, 10);
 You can use mc-bedrock-lib to add custom properties to Minecraft modules. These helpers extend the original objects from @minecraft/server.
 
 ```js
-import { world, ItemStack } from "@minecraft/server";
-import "mc-bedrock-lib";
-
-for (const player of world.players) {
-  player.setTitleBar("Welcome!");
-
-  player.setMainhand(new ItemStack("minecraft:apple"));
-
-  const result = player.commandRun("say 1", "say 2", ["say 3", "say 4"]); // {successCount: 4}
-}
-```
-
-Without the library:
-
-```js
+// Without library:
 import { world, EntityComponentTypes, EquipmentSlot, ItemStack } from "@minecraft/server";
 
 for (const player of world.getPlayers()) {
@@ -81,7 +69,38 @@ for (const player of world.getPlayers()) {
 
   const successCount = result1.successCount + result2.successCount + result3.successCount + result4.successCount; // 4
 }
+
+// With library
+import { world, ItemStack } from "@minecraft/server";
+import "mc-bedrock-lib";
+
+for (const player of world.players) {
+  player.setTitleBar("Welcome!");
+  player.setMainhand(new ItemStack("minecraft:apple"));
+  const result = player.commandRun("say 1", "say 2", ["say 3", "say 4"]); // {successCount: 4}
+}
 ```
+
+You can use custom properties anywhere in your scripts after importing the library once in your entrypoint (like `index.js`).  
+For example, after this import in your main file:
+
+```js
+import "mc-bedrock-lib";
+```
+
+You can use helpers like `setMainhand` or `commandRun` in any other module:
+
+```js
+// someModule.js
+import { world, ItemStack } from "@minecraft/server";
+
+for (const player of world.players) {
+  player.setMainhand(new ItemStack("minecraft:diamond_sword"));
+  player.commandRun("say Equipped sword");
+}
+```
+
+No need to re-import the library in every file—just import it once at startup.
 
 ---
 

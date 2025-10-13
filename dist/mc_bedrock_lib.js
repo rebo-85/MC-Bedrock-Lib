@@ -602,8 +602,8 @@ var scriptEvent = s.afterEvents.scriptEventReceive;
 
 // src/server_extension.ts
 import {
-  Dimension as Dimension2,
-  Entity as Entity3,
+  Dimension,
+  Entity as Entity2,
   BlockPermutation,
   Player as Player3,
   WorldAfterEvents as WorldAfterEvents2,
@@ -621,63 +621,22 @@ import {
   BlockComponentTypes,
   BlockTypes,
   WeatherType as WeatherType2,
-  world as world7,
+  world as world6,
   InputPermissionCategory
 } from "@minecraft/server";
 
 // src/utils.ts
-import { Entity as Entity2, Dimension, world as world5 } from "@minecraft/server";
-var entityRunCommand = Entity2.prototype.runCommand;
-var dimensionRunCommand = Dimension.prototype.runCommand;
 function defineProperties(target, properties) {
-  for (const [property, descriptor] of Object.entries(properties)) {
-    Object.defineProperty(target, property, { ...descriptor, configurable: true });
+  for (const [prop, descriptor] of Object.entries(properties)) {
+    Object.defineProperty(target, prop, { ...descriptor, configurable: true });
   }
 }
-function getRandomElement(array) {
-  const randomIndex = Math.floor(Math.random() * array.length);
-  return array[randomIndex];
-}
-function generateUUIDv4() {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === "x" ? r : r & 3 | 8;
-    return v.toString(16);
-  });
+function getRandom(arr) {
+  const i = Math.floor(Math.random() * arr.length);
+  return arr[i];
 }
 function idTranslate(id) {
   return id.split(":")[1].split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
-}
-function runCommand(source, ...commands) {
-  let result = { successCount: 0 };
-  const flattenedCommands = commands.flat();
-  flattenedCommands.forEach((command) => {
-    if (source === Entity2) {
-      const cr = entityRunCommand.call(this, command);
-      if (cr.successCount > 0) result.successCount++;
-    } else if (source === Dimension) {
-      const cr = dimensionRunCommand.call(this, command);
-      if (cr.successCount > 0) result.successCount++;
-    }
-  });
-  return result;
-}
-function display(value, type = "chat") {
-  value = JSON.stringify(value, null, 0);
-  switch (type) {
-    case "chat":
-      world5.sendMessage(`${value}`);
-      break;
-    case "error":
-      console.error(value);
-      break;
-    case "log":
-      console.log(value);
-      break;
-    default:
-      world5.sendMessage(`${value}`);
-      break;
-  }
 }
 function arraysEqual(arr1, arr2) {
   if (arr1 === arr2) return true;
@@ -701,22 +660,42 @@ function objectsEqual(obj1, obj2) {
   }
   return true;
 }
+function clampValue(num, min, max) {
+  if (num < min) return min;
+  if (num > max) return max;
+  return num;
+}
+function deepClone(input) {
+  if (input === null || typeof input !== "object") return input;
+  if (Array.isArray(input)) return input.map(deepClone);
+  const out = {};
+  for (const key in input) out[key] = deepClone(input[key]);
+  return out;
+}
+function isPlainObject(val) {
+  return !!val && typeof val === "object" && val.constructor === Object;
+}
+function pickKeys(obj, keys) {
+  const picked = {};
+  for (const key of keys) if (key in obj) picked[key] = obj[key];
+  return picked;
+}
 
 // src/events.ts
-import { world as world6 } from "@minecraft/server";
+import { world as world5 } from "@minecraft/server";
 var playersUsingItem = /* @__PURE__ */ new Set();
-world6.afterEvents.itemUse.subscribe((e) => {
+world5.afterEvents.itemUse.subscribe((e) => {
   const { source: player } = e;
   playersUsingItem.add(player.id);
 });
-world6.afterEvents.itemStopUse.subscribe((e) => {
+world5.afterEvents.itemStopUse.subscribe((e) => {
   const { source: player } = e;
   if (playersUsingItem.has(player.id)) playersUsingItem.delete(player.id);
 });
 var weatherTracker = /* @__PURE__ */ new Map();
-world6.beforeEvents.weatherChange.subscribe((e) => {
+world5.beforeEvents.weatherChange.subscribe((e) => {
   const { previousWeather, duration } = e;
-  if (duration == world6.getTimeOfDay()) {
+  if (duration == world5.getTimeOfDay()) {
     weatherTracker.set(duration, previousWeather);
     e.cancel = true;
   }
@@ -1061,7 +1040,7 @@ defineProperties(Player3.prototype, {
     }
   }
 });
-defineProperties(Entity3.prototype, {
+defineProperties(Entity2.prototype, {
   equippableComponent: {
     get: function() {
       return this.getComponent(EntityComponentTypes.Equippable);
@@ -1538,7 +1517,7 @@ defineProperties(ScriptEventCommandMessageAfterEvent.prototype, {
     enumerable: true
   }
 });
-defineProperties(Dimension2.prototype, {
+defineProperties(Dimension.prototype, {
   commandRun: {
     value: function(...commands) {
       let result = { successCount: 0 };
@@ -1552,7 +1531,7 @@ defineProperties(Dimension2.prototype, {
   },
   weather: {
     get: function() {
-      const eventId = world7.getTimeOfDay();
+      const eventId = world6.getTimeOfDay();
       const weatherTypes = Object.values(WeatherType2);
       for (const weatherType of weatherTypes) {
         this.setWeather(weatherType, eventId);
@@ -1778,14 +1757,15 @@ export {
   afterEvents,
   arraysEqual,
   beforeEvents,
+  clampValue,
+  deepClone,
   defineProperties,
-  display,
-  generateUUIDv4,
-  getRandomElement,
+  getRandom,
   idTranslate,
+  isPlainObject,
   namespace,
+  pickKeys,
   playersUsingItem,
-  runCommand,
   scriptEvent,
   system4 as system,
   weatherTracker,

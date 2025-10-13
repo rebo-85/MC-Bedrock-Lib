@@ -84,7 +84,7 @@ export class PlayerOnUnequipAfterEvent extends PlayerOnEquipAfterEvent {
   }
 }
 
-// Event signal classes
+// signals
 export class EventSignal {
   protected _events: Map<string, any>;
   protected _process: any;

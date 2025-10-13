@@ -1,72 +1,20 @@
-import { Entity, Dimension, world } from "@minecraft/server";
-import { CommandResult } from "./interface";
-
-const entityRunCommand = Entity.prototype.runCommand;
-const dimensionRunCommand = Dimension.prototype.runCommand;
-
 export function defineProperties(target: object, properties: Record<string, PropertyDescriptor>) {
-  for (const [property, descriptor] of Object.entries(properties)) {
-    Object.defineProperty(target, property, { ...descriptor, configurable: true });
+  for (const [prop, descriptor] of Object.entries(properties)) {
+    Object.defineProperty(target, prop, { ...descriptor, configurable: true });
   }
 }
 
-export function getRandomElement<T>(array: T[]): T {
-  const randomIndex = Math.floor(Math.random() * array.length);
-  return array[randomIndex];
+export function getRandom<T>(arr: T[]): T {
+  const i = Math.floor(Math.random() * arr.length);
+  return arr[i];
 }
 
-export function generateUUIDv4(): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
 export function idTranslate(id: string): string {
   return id
     .split(":")[1]
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
-}
-
-export function runCommand(
-  this: Entity | Dimension,
-  source: typeof Entity | typeof Dimension,
-  ...commands: string[] | string[][]
-): CommandResult {
-  let result = { successCount: 0 };
-
-  const flattenedCommands = commands.flat();
-
-  flattenedCommands.forEach((command) => {
-    if (source === Entity) {
-      const cr = entityRunCommand.call(this, command);
-      if (cr.successCount > 0) result.successCount++;
-    } else if (source === Dimension) {
-      const cr = dimensionRunCommand.call(this, command);
-      if (cr.successCount > 0) result.successCount++;
-    }
-  });
-  return result;
-}
-
-export function display(value: any, type: "chat" | "error" | "log" = "chat"): void {
-  value = JSON.stringify(value, null, 0);
-  switch (type) {
-    case "chat":
-      world.sendMessage(`${value}`);
-      break;
-    case "error":
-      console.error(value);
-      break;
-    case "log":
-      console.log(value);
-      break;
-    default:
-      world.sendMessage(`${value}`);
-      break;
-  }
 }
 
 export function arraysEqual(arr1: any[], arr2: any[]): boolean {
@@ -95,4 +43,28 @@ function objectsEqual(obj1: Record<string, any>, obj2: Record<string, any>): boo
   }
 
   return true;
+}
+
+export function clampValue(num: number, min: number, max: number): number {
+  if (num < min) return min;
+  if (num > max) return max;
+  return num;
+}
+
+export function deepClone<T>(input: T): T {
+  if (input === null || typeof input !== "object") return input;
+  if (Array.isArray(input)) return input.map(deepClone) as any;
+  const out: any = {};
+  for (const key in input) out[key] = deepClone((input as any)[key]);
+  return out;
+}
+
+export function isPlainObject(val: unknown): val is Record<string, unknown> {
+  return !!val && typeof val === "object" && val.constructor === Object;
+}
+
+export function pickKeys<T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
+  const picked: Partial<T> = {};
+  for (const key of keys) if (key in obj) picked[key] = obj[key];
+  return picked as Pick<T, K>;
 }
