@@ -1,16 +1,4 @@
 import {
-  World,
-  Player,
-  Entity,
-  ItemStack,
-  EquipmentSlot,
-  Container,
-  Block,
-  BlockPermutation,
-  Dimension,
-  WeatherType,
-} from "@minecraft/server";
-import {
   EntityJumpAfterEventSignal,
   EntityStartJumpingAfterEventSignal,
   EntityStopJumpingAfterEventSignal,
@@ -22,7 +10,6 @@ import {
   PlayerOnUnequipAfterEventSignal,
   Vector3,
   Vector2,
-  CommandResult,
 } from "./classes";
 
 declare global {
@@ -72,7 +59,7 @@ declare module "@minecraft/server" {
     ipCamera: boolean;
   }
   interface Entity {
-    commandRun(...commands: string[]): CommandResult;
+    commandRun(...commands: (string | string[])[]): CommandResult;
     readonly chunk: Vector3;
     effectAdd(effectName: string, durationInSeconds?: number, amplifier?: number, hideParticles?: boolean): void;
     effectClear(effectType?: string | null): void;
@@ -103,6 +90,12 @@ declare module "@minecraft/server" {
     dispose(): void;
     getEquipment(slot: EquipmentSlot): ItemStack | undefined;
     setEquipment(slot: EquipmentSlot, item: ItemStack): boolean | undefined;
+    setMainhand(item: ItemStack | undefined): void;
+    setOffhand(item: ItemStack | undefined): void;
+    setHead(item: ItemStack | undefined): void;
+    setChest(item: ItemStack | undefined): void;
+    setLegs(item: ItemStack | undefined): void;
+    setFeet(item: ItemStack | undefined): void;
     readonly inventory: Container | undefined;
     addItem(itemStack: ItemStack): void;
     tameOwner: Entity | undefined;
@@ -159,7 +152,7 @@ declare module "@minecraft/server" {
   }
   interface Dimension {
     weather: WeatherType | { type: WeatherType; duration: number } | undefined;
-    commandRun(...commands: string[]): CommandResult;
+    commandRun(...commands: (string | string[])[]): CommandResult;
   }
 
   interface ScriptEventCommandMessageAfterEvent {

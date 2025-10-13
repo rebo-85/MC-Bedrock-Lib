@@ -49,11 +49,9 @@ import {
   PlayerOnUnequipAfterEventSignal,
 } from "./classes/index";
 
-import { CommandResult } from "./interface";
-
 import { Vector3, Vector2 } from "./classes/index";
 
-import { runCommand, arraysEqual, defineProperties } from "./utils";
+import { arraysEqual, defineProperties } from "./utils";
 import { playersUsingItem, weatherTracker } from "./events";
 
 // WorldAfterEvents
@@ -492,7 +490,7 @@ defineProperties(Entity.prototype, {
     },
   },
   commandRun: {
-    value: function (...commands: string[]): any {
+    value: function (...commands: (string | string[])[]): any {
       let result = { successCount: 0 };
 
       const flattenedCommands = commands.flat();
@@ -659,6 +657,36 @@ defineProperties(Entity.prototype, {
   setEquipment: {
     value: function (slot: EquipmentSlot, item: ItemStack): boolean | undefined {
       return (this as Entity).equippableComponent?.setEquipment(slot, item);
+    },
+  },
+  setMainhand: {
+    value: function (item: ItemStack | undefined) {
+      this.setEquipment?.(EquipmentSlot.Mainhand, item);
+    },
+  },
+  setOffhand: {
+    value: function (item: ItemStack | undefined) {
+      this.setEquipment?.(EquipmentSlot.Offhand, item);
+    },
+  },
+  setHead: {
+    value: function (item: ItemStack | undefined) {
+      this.setEquipment?.(EquipmentSlot.Head, item);
+    },
+  },
+  setChest: {
+    value: function (item: ItemStack | undefined) {
+      this.setEquipment?.(EquipmentSlot.Chest, item);
+    },
+  },
+  setLegs: {
+    value: function (item: ItemStack | undefined) {
+      this.setEquipment?.(EquipmentSlot.Legs, item);
+    },
+  },
+  setFeet: {
+    value: function (item: ItemStack | undefined) {
+      this.setEquipment?.(EquipmentSlot.Feet, item);
     },
   },
   speed: {
@@ -888,7 +916,7 @@ defineProperties(ScriptEventCommandMessageAfterEvent.prototype, {
 // Dimension
 defineProperties(Dimension.prototype, {
   commandRun: {
-    value: function (...commands: string[]): any {
+    value: function (...commands: (string | string[])[]): any {
       let result = { successCount: 0 };
 
       const flattenedCommands = commands.flat();

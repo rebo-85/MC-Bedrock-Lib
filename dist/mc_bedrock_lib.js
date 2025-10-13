@@ -1,25 +1,481 @@
-// src/classes.ts
-import {
-  EquipmentSlot,
-  system as system2,
-  world
-} from "@minecraft/server";
+// src/classes/utils.ts
+import { system } from "@minecraft/server";
+var Run = class {
+  constructor() {
+    this._process = null;
+  }
+  dispose() {
+    system.clearRun(this._process);
+  }
+};
+var RunInterval = class extends Run {
+  constructor(cb, interval = 1) {
+    super();
+    this._process = system.runInterval(cb, interval);
+  }
+};
+var RunTimeOut = class extends Run {
+  constructor(cb, timeOut = 1) {
+    super();
+    this._process = system.runTimeout(cb, timeOut);
+  }
+};
 
-// src/constants.ts
-import {
-  world as w,
-  system as s,
-  TicksPerSecond
-} from "@minecraft/server";
-var namespace = "eternal";
-var ns = namespace;
-var tps = TicksPerSecond;
-var system = s;
-var afterEvents = w.afterEvents;
-var beforeEvents = w.beforeEvents;
-var scriptEvent = s.afterEvents.scriptEventReceive;
+// src/classes/countDownTimer.ts
+var CountDownTimer = class {
+  constructor(durationInSeconds = 10, onEnd = () => {
+  }, onUpdate = () => {
+  }) {
+    this.minutes = 0;
+    this.seconds = "00";
+    this.timer = durationInSeconds;
+    this.process = new RunInterval(() => {
+      this.minutes = Math.floor(this.timer / 60);
+      this.seconds = this.timer % 60;
+      this.seconds = this.seconds < 10 ? "0" + this.seconds : this.seconds;
+      onUpdate(this.minutes, this.seconds);
+      if (--this.timer < -1) {
+        onEnd();
+        this.process.dispose();
+        return;
+      }
+    }, 20);
+  }
+  dispose() {
+    this.process.dispose();
+  }
+};
 
-// src/classes.ts
+// src/classes/cutscene.ts
+import { world, system as system2 } from "@minecraft/server";
+var Cutscene = class {
+  constructor(target, scenes, timedCommands = [], is_spectator = true, is_invisible = true) {
+    this.target = target;
+    this.scenes = scenes;
+    this.timedCommands = timedCommands;
+    this.is_spectator = is_spectator;
+    this.is_invisible = is_invisible;
+  }
+  play() {
+    const entities = world.getEntities(this.target);
+    for (const entity of entities) {
+      const player = entity;
+      player.commandRun(`inputpermission set @s camera disabled`, `inputpermission set @s movement disabled`);
+      player.commandRun("hud @s hide all");
+      const checkpoint = { pos: player.location, rot: player.rotation };
+      let originalGamemode = null;
+      if (this.is_spectator) {
+        const currentGamemode = player.gamemode?.toString?.() || player.gamemode || "adventure";
+        originalGamemode = currentGamemode === "spectator" ? "adventure" : currentGamemode;
+        player.commandRun(`gamemode spectator @s`);
+      }
+      if (this.is_invisible) player.commandRun(`effect @s invisibility infinite 0 true`);
+      this.timedCommands.forEach((timedCommand) => {
+        new RunTimeOut(() => {
+          player.commandRun(timedCommand.commands);
+        }, timedCommand.timeTick);
+      });
+      let timeline = 0;
+      this.scenes.forEach((scene, i) => {
+        const fade = scene.fade;
+        let fadeInTime = 0;
+        if (fade) {
+          system2.runTimeout(() => {
+            player.camera.fade({
+              fadeTime: {
+                fadeInTime: fade.fadeIn,
+                holdTime: fade.fadeHold,
+                fadeOutTime: fade.fadeOut
+              }
+            });
+          }, timeline);
+          fadeInTime = fade.fadeIn;
+        }
+        const endTime = scene.duration * 20 + fadeInTime * 20;
+        system2.runTimeout(() => {
+          system2.runTimeout(() => {
+            player.teleport(scene.posStart, { facingLocation: scene.rotStart });
+          }, fadeInTime * 20);
+          system2.runTimeout(() => {
+            player.commandRun(
+              `camera @s set minecraft:free pos ${scene.posStart.toString()} facing ${scene.rotStart.toString()}`,
+              `camera @s set minecraft:free ease ${scene.duration} ${scene.ease_type} pos ${scene.posEnd.toString()} facing ${scene.rotEnd.toString()}`
+            );
+          }, fadeInTime * 20);
+          system2.runTimeout(() => {
+            player.commandRun(`camera @s clear`);
+            player.commandRun("hud @s reset all");
+            if (i === this.scenes.length - 1) {
+              if (this.is_spectator) {
+                if (originalGamemode) {
+                  player.commandRun(`gamemode ${originalGamemode} @s`);
+                } else {
+                  player.commandRun(`gamemode adventure @s`);
+                }
+              }
+              if (this.is_invisible) player.commandRun(`effect @s invisibility 0`);
+              player.commandRun(`inputpermission set @s camera enabled`, `inputpermission set @s movement enabled`);
+              player.teleport(checkpoint.pos, { rotation: checkpoint.rot });
+            }
+          }, endTime);
+        }, timeline);
+        timeline += endTime;
+      });
+    }
+  }
+};
+
+// src/classes/debugStickInspector.ts
+import { world as world2, EquipmentSlot } from "@minecraft/server";
+var DebugStickInspector = class {
+  constructor() {
+    this._interval = new RunInterval(() => this._updatePlayers(), 1);
+  }
+  dispose() {
+    this._interval?.dispose();
+  }
+  _updatePlayers() {
+    for (const player of world2.getAllPlayers()) {
+      const mainhand = player.getEquipment(EquipmentSlot.Mainhand);
+      if (!mainhand || mainhand.typeId !== "minecraft:debug_stick") continue;
+      let target = player.getEntitiesFromViewDirection({
+        includeLiquidBlocks: true,
+        includePassableBlocks: true
+      })[0];
+      if (!target) {
+        target = player.getBlockFromViewDirection({
+          includeLiquidBlocks: true,
+          includePassableBlocks: true,
+          maxDistance: 7
+        });
+      }
+      let actionBarText = "No selected Block/Entity";
+      if (target && "block" in target && target.block) {
+        const block = target.block;
+        actionBarText = {
+          rawtext: [
+            { text: `\xA7bBlock\xA7r: \xA7f${block.typeId}
+\xA7r` },
+            { text: `\xA7bFace\xA7r: \xA7f${target.face}
+\xA7r` },
+            { text: `\xA7bData\xA7r: \xA7f${JSON.stringify(block.permutation.getAllStates(), null, 2)}\xA7r` }
+          ]
+        };
+      } else if (target && "entity" in target && target.entity) {
+        const entity = target.entity;
+        const entityData = {
+          dynamicProperties: entity.getDynamicPropertyIds()
+        };
+        actionBarText = {
+          rawtext: [
+            { text: `\xA7bEntity\xA7r: \xA7f${entity.typeId}
+\xA7r` },
+            { text: `\xA7bHealth\xA7r: \xA7f${entity.health}/${entity.maxHealth}
+\xA7r` },
+            { text: `\xA7bFamilies\xA7r: \xA7f[${entity.typeFamilies}]
+\xA7r` },
+            { text: `\xA7bData\xA7r: \xA7f${JSON.stringify(entityData, null, 2)}\xA7r` }
+          ]
+        };
+      }
+      player.setActionBar(actionBarText);
+    }
+  }
+};
+
+// src/classes/events.ts
+import { EquipmentSlot as EquipmentSlot2, system as system3, world as world3 } from "@minecraft/server";
+var Event = class {
+  constructor() {
+  }
+};
+var AfterEvent = class extends Event {
+  constructor() {
+    super();
+  }
+};
+var EntityAfterEvent = class extends AfterEvent {
+  constructor(entity) {
+    super();
+    this.entity = entity;
+  }
+};
+var PlayerAfterEvent = class extends AfterEvent {
+  constructor(player) {
+    super();
+    this.player = player;
+  }
+};
+var EntityOnGroundAfterEvent = class extends EntityAfterEvent {
+  constructor(entity) {
+    super(entity);
+  }
+};
+var EntityJumpAfterEvent = class extends EntityAfterEvent {
+  constructor(entity) {
+    super(entity);
+  }
+};
+var EntitySneakAfterEvent = class extends EntityAfterEvent {
+  constructor(entity) {
+    super(entity);
+  }
+};
+var EntityUnsneakAfterEvent = class extends EntityAfterEvent {
+  constructor(entity) {
+    super(entity);
+  }
+};
+var PlayerOnAirJumpAfterEvent = class extends PlayerAfterEvent {
+  constructor(player) {
+    super(player);
+  }
+};
+var PlayerOnLandAfterEvent = class extends PlayerAfterEvent {
+  constructor(player) {
+    super(player);
+  }
+};
+var ItemAfterEvent = class extends PlayerAfterEvent {
+  constructor(player, itemStack) {
+    super(player);
+    this.itemStack = itemStack;
+  }
+};
+var PlayerOnEquipAfterEvent = class extends ItemAfterEvent {
+  constructor(player, itemStack, equipmentSlot) {
+    super(player, itemStack);
+    this.equipmentSlot = equipmentSlot;
+  }
+};
+var PlayerOnUnequipAfterEvent = class extends PlayerOnEquipAfterEvent {
+  constructor(player, itemStack, equipmentSlot) {
+    super(player, itemStack, equipmentSlot);
+  }
+};
+var EventSignal = class {
+  constructor() {
+    this._events = /* @__PURE__ */ new Map();
+    this._process = null;
+    this._isDisposed = false;
+  }
+  subscribe(cb) {
+    const process = () => {
+      this._run(cb);
+      if (!this._isDisposed) this._process = system3.run(process);
+    };
+    this._process = system3.run(process);
+  }
+  unsubscribe() {
+    this._isDisposed = true;
+    system3.clearRun(this._process);
+  }
+  _run(cb) {
+  }
+};
+var EntityEventSignal = class extends EventSignal {
+  constructor() {
+    super();
+    this._entityIds = /* @__PURE__ */ new Set();
+  }
+};
+var EntityItemEventSignal = class extends EntityEventSignal {
+  constructor() {
+    super();
+    this._items = /* @__PURE__ */ new Set();
+  }
+};
+var EntityJumpAfterEventSignal = class extends EntityEventSignal {
+  constructor() {
+    super();
+  }
+  _run(cb) {
+    for (const entity of world3.getEntities()) {
+      if (entity.isJumping && !entity.isOnGround && !this._entityIds.has(entity.id)) {
+        this._entityIds.add(entity.id);
+        this._events.set(entity.id, new EntityJumpAfterEvent(entity));
+        cb(this._events.get(entity.id));
+      } else if (entity.isOnGround && this._entityIds.has(entity.id)) {
+        this._entityIds.delete(entity.id);
+        this._events.delete(entity.id);
+      }
+    }
+  }
+};
+var EntityStartJumpingAfterEventSignal = class extends EntityEventSignal {
+  constructor() {
+    super();
+  }
+  _run(cb) {
+    for (const entity of world3.getEntities()) {
+      if (entity.isJumping && !entity.isOnGround && !this._entityIds.has(entity.id)) {
+        this._entityIds.add(entity.id);
+        this._events.set(entity.id, new EntityJumpAfterEvent(entity));
+        cb(this._events.get(entity.id));
+      } else if (!entity.isJumping && this._entityIds.has(entity.id)) {
+        this._entityIds.delete(entity.id);
+        this._events.delete(entity.id);
+      }
+    }
+  }
+};
+var EntityStopJumpingAfterEventSignal = class extends EntityEventSignal {
+  constructor() {
+    super();
+  }
+  _run(cb) {
+    for (const entity of world3.getEntities()) {
+      if (entity.isJumping && !entity.isOnGround && !this._entityIds.has(entity.id)) {
+        this._entityIds.add(entity.id);
+      } else if (!entity.isJumping && this._entityIds.has(entity.id)) {
+        this._events.set(entity.id, new EntityJumpAfterEvent(entity));
+        cb(this._events.get(entity.id));
+        this._events.delete(entity.id);
+        this._entityIds.delete(entity.id);
+      }
+    }
+  }
+};
+var EntitySneakAfterEventSignal = class extends EntityEventSignal {
+  constructor() {
+    super();
+  }
+  _run(cb) {
+    for (const entity of world3.getEntities()) {
+      if (entity.isSneaking && !this._entityIds.has(entity.id)) {
+        this._entityIds.add(entity.id);
+        this._events.set(entity.id, new EntitySneakAfterEvent(entity));
+        cb(this._events.get(entity.id));
+      } else if (!entity.isSneaking && this._entityIds.has(entity.id)) {
+        this._entityIds.delete(entity.id);
+        this._events.delete(entity.id);
+      }
+    }
+  }
+};
+var EntityUnsneakAfterEventSignal = class extends EntityEventSignal {
+  constructor() {
+    super();
+    this._sneaking = /* @__PURE__ */ new Set();
+  }
+  _run(cb) {
+    for (const entity of world3.getEntities()) {
+      if (entity.isSneaking) {
+        this._sneaking.add(entity.id);
+        if (this._entityIds.has(entity.id)) {
+          this._events.delete(entity.id);
+          this._entityIds.delete(entity.id);
+        }
+      } else if (!entity.isSneaking && this._sneaking.has(entity.id) && !this._events.has(entity.id)) {
+        this._entityIds.add(entity.id);
+        this._events.set(entity.id, new EntityUnsneakAfterEvent(entity));
+        cb(this._events.get(entity.id));
+        this._sneaking.delete(entity.id);
+      }
+    }
+  }
+};
+var PlayerOnAirJumpAfterEventSignal = class extends EntityEventSignal {
+  constructor() {
+    super();
+    this._onAir = /* @__PURE__ */ new Set();
+  }
+  _run(cb) {
+    for (const player of world3.players) {
+      if (!player.isJumping && !player.isOnGround) {
+        if (this._onAir.has(player.id)) {
+          this._entityIds.add(player.id);
+        } else this._onAir.add(player.id);
+      } else if (player.isJumping && !player.isOnGround && this._entityIds.has(player.id) && !this._events.has(player.id)) {
+        this._events.set(player.id, new PlayerOnAirJumpAfterEvent(player));
+        cb(this._events.get(player.id));
+      } else {
+        this._events.delete(player.id);
+        this._entityIds.delete(player.id);
+        this._onAir.delete(player.id);
+      }
+    }
+  }
+};
+var PlayerOnEquipAfterEventSignal = class extends EntityEventSignal {
+  constructor() {
+    super();
+    this._previousEquipments = /* @__PURE__ */ new Map();
+  }
+  _run(cb) {
+    for (const player of world3.players) {
+      let slots = Object.values(EquipmentSlot2);
+      const currentEquipments = /* @__PURE__ */ new Map();
+      for (const slot of slots) {
+        const item = player.getEquipment(slot);
+        if (item) currentEquipments.set(slot, item);
+      }
+      const previousEquipments = this._previousEquipments.get(player.id) || currentEquipments;
+      for (const [slot, itemStack] of currentEquipments) {
+        const prevItemStack = previousEquipments.get(slot);
+        if (!itemStack.compare(prevItemStack) && !this._entityIds.has(player.id)) {
+          this._entityIds.add(player.id);
+          this._events.set(player.id, new PlayerOnEquipAfterEvent(player, itemStack, slot));
+          cb(this._events.get(player.id));
+        } else if (itemStack.compare(prevItemStack) && this._entityIds.has(player.id)) {
+          this._events.delete(player.id);
+          this._entityIds.delete(player.id);
+        }
+      }
+      this._previousEquipments.set(player.id, currentEquipments);
+    }
+  }
+};
+var PlayerOnUnequipAfterEventSignal = class extends EntityEventSignal {
+  constructor() {
+    super();
+    this._previousEquipments = /* @__PURE__ */ new Map();
+  }
+  _run(cb) {
+    for (const player of world3.players) {
+      let slots = Object.values(EquipmentSlot2);
+      const currentEquipments = /* @__PURE__ */ new Map();
+      for (const slot of slots) {
+        const item = player.getEquipment(slot);
+        if (item) currentEquipments.set(slot, item);
+      }
+      const previousEquipments = this._previousEquipments.get(player.id) || currentEquipments;
+      for (const [slot, itemStack] of currentEquipments) {
+        const prevItemStack = previousEquipments.get(slot);
+        if (prevItemStack) {
+          if (!prevItemStack.compare(itemStack) && !this._entityIds.has(player.id)) {
+            this._entityIds.add(player.id);
+            this._events.set(player.id, new PlayerOnUnequipAfterEvent(player, prevItemStack, slot));
+            cb(this._events.get(player.id));
+          } else if (prevItemStack.compare(itemStack) && this._entityIds.has(player.id)) {
+            this._events.delete(player.id);
+            this._entityIds.delete(player.id);
+          }
+        }
+      }
+      this._previousEquipments.set(player.id, currentEquipments);
+    }
+  }
+};
+var PlayerOnLandAfterEventSignal = class extends EntityEventSignal {
+  constructor() {
+    super();
+  }
+  _run(cb) {
+    for (const player of world3.players) {
+      if (!player.isOnGround && !this._entityIds.has(player.id)) {
+        this._entityIds.add(player.id);
+      } else if (player.isOnGround && this._entityIds.has(player.id)) {
+        this._events.set(player.id, new PlayerOnLandAfterEvent(player));
+        cb(this._events.get(player.id));
+        this._events.delete(player.id);
+        this._entityIds.delete(player.id);
+      }
+    }
+  }
+};
+
+// src/classes/general.ts
 var Vector2 = class _Vector2 {
   constructor(x, y) {
     if (typeof x === "object" && x !== null && "x" in x && "y" in x) {
@@ -131,557 +587,46 @@ var Vector3 = class _Vector3 extends Vector2 {
     return new _Vector3(Math.abs(this.x - vec.x), Math.abs(this.y - vec.y), Math.abs(this.z - vec.z));
   }
 };
-var Event = class {
-  constructor() {
-  }
-};
-var AfterEvent = class extends Event {
-  constructor() {
-    super();
-  }
-};
-var BeforeEvent = class extends Event {
-  constructor() {
-    super();
-    this.cancel = false;
-  }
-};
-var EntityAfterEvent = class extends AfterEvent {
-  constructor(entity) {
-    super();
-    this.entity = entity;
-  }
-};
-var EntityOnGroundAfterEvent = class extends EntityAfterEvent {
-  constructor(entity) {
-    super(entity);
-  }
-};
-var PlayerAfterEvent = class extends AfterEvent {
-  constructor(player) {
-    super();
-    this.player = player;
-  }
-};
-var EntityJumpAfterEvent = class extends EntityAfterEvent {
-  constructor(entity) {
-    super(entity);
-  }
-};
-var EntitySneakAfterEvent = class extends EntityAfterEvent {
-  constructor(entity) {
-    super(entity);
-  }
-};
-var EntityUnsneakAfterEvent = class extends EntityAfterEvent {
-  constructor(entity) {
-    super(entity);
-  }
-};
-var PlayerOnAirJumpAfterEvent = class extends PlayerAfterEvent {
-  constructor(player) {
-    super(player);
-  }
-};
-var PlayerOnLandAfterEvent = class extends PlayerAfterEvent {
-  constructor(player) {
-    super(player);
-  }
-};
-var ItemAfterEvent = class extends PlayerAfterEvent {
-  constructor(player, itemStack) {
-    super(player);
-    this.itemStack = itemStack;
-  }
-};
-var PlayerOnEquipAfterEvent = class extends ItemAfterEvent {
-  constructor(player, itemStack, equipmentSlot) {
-    super(player, itemStack);
-    this.equipmentSlot = equipmentSlot;
-  }
-};
-var PlayerOnUnequipAfterEvent = class extends PlayerOnEquipAfterEvent {
-  constructor(player, itemStack, equipmentSlot) {
-    super(player, itemStack, equipmentSlot);
-  }
-};
-var EventSignal = class {
-  constructor() {
-    this._events = /* @__PURE__ */ new Map();
-    this._process = null;
-    this._isDisposed = false;
-  }
-  subscribe(cb) {
-    const process = () => {
-      this._run(cb);
-      if (!this._isDisposed) this._process = system2.run(process);
-    };
-    this._process = system2.run(process);
-  }
-  unsubscribe() {
-    this._isDisposed = true;
-    system2.clearRun(this._process);
-  }
-  _run(cb) {
-  }
-};
-var EntityEventSignal = class extends EventSignal {
-  constructor() {
-    super();
-    this._entityIds = /* @__PURE__ */ new Set();
-  }
-};
-var EntityItemEventSignal = class extends EntityEventSignal {
-  constructor() {
-    super();
-    this._items = /* @__PURE__ */ new Set();
-  }
-};
-var EntityJumpAfterEventSignal = class extends EntityEventSignal {
-  constructor() {
-    super();
-  }
-  _run(cb) {
-    for (const entity of world.getEntities()) {
-      if (entity.isJumping && !entity.isOnGround && !this._entityIds.has(entity.id)) {
-        this._entityIds.add(entity.id);
-        this._events.set(entity.id, new EntityJumpAfterEvent(entity));
-        cb(this._events.get(entity.id));
-      } else if (entity.isOnGround && this._entityIds.has(entity.id)) {
-        this._entityIds.delete(entity.id);
-        this._events.delete(entity.id);
-      }
-    }
-  }
-};
-var EntityStartJumpingAfterEventSignal = class extends EntityEventSignal {
-  constructor() {
-    super();
-  }
-  _run(cb) {
-    for (const entity of world.getEntities()) {
-      if (entity.isJumping && !entity.isOnGround && !this._entityIds.has(entity.id)) {
-        this._entityIds.add(entity.id);
-        this._events.set(entity.id, new EntityJumpAfterEvent(entity));
-        cb(this._events.get(entity.id));
-      } else if (!entity.isJumping && this._entityIds.has(entity.id)) {
-        this._entityIds.delete(entity.id);
-        this._events.delete(entity.id);
-      }
-    }
-  }
-};
-var EntityStopJumpingAfterEventSignal = class extends EntityEventSignal {
-  constructor() {
-    super();
-  }
-  _run(cb) {
-    for (const entity of world.getEntities()) {
-      if (entity.isJumping && !entity.isOnGround && !this._entityIds.has(entity.id)) {
-        this._entityIds.add(entity.id);
-      } else if (!entity.isJumping && this._entityIds.has(entity.id)) {
-        this._events.set(entity.id, new EntityJumpAfterEvent(entity));
-        cb(this._events.get(entity.id));
-        this._events.delete(entity.id);
-        this._entityIds.delete(entity.id);
-      }
-    }
-  }
-};
-var EntitySneakAfterEventSignal = class extends EntityEventSignal {
-  constructor() {
-    super();
-  }
-  _run(cb) {
-    for (const entity of world.getEntities()) {
-      if (entity.isSneaking && !this._entityIds.has(entity.id)) {
-        this._entityIds.add(entity.id);
-        this._events.set(entity.id, new EntitySneakAfterEvent(entity));
-        cb(this._events.get(entity.id));
-      } else if (!entity.isSneaking && this._entityIds.has(entity.id)) {
-        this._entityIds.delete(entity.id);
-        this._events.delete(entity.id);
-      }
-    }
-  }
-};
-var EntityUnsneakAfterEventSignal = class extends EntityEventSignal {
-  constructor() {
-    super();
-    this._sneaking = /* @__PURE__ */ new Set();
-  }
-  _run(cb) {
-    for (const entity of world.getEntities()) {
-      if (entity.isSneaking) {
-        this._sneaking.add(entity.id);
-        if (this._entityIds.has(entity.id)) {
-          this._events.delete(entity.id);
-          this._entityIds.delete(entity.id);
-        }
-      } else if (!entity.isSneaking && this._sneaking.has(entity.id) && !this._events.has(entity.id)) {
-        this._entityIds.add(entity.id);
-        this._events.set(entity.id, new EntityUnsneakAfterEvent(entity));
-        cb(this._events.get(entity.id));
-        this._sneaking.delete(entity.id);
-      }
-    }
-  }
-};
-var PlayerOnAirJumpAfterEventSignal = class extends EntityEventSignal {
-  constructor() {
-    super();
-    this._onAir = /* @__PURE__ */ new Set();
-  }
-  _run(cb) {
-    for (const player of world.players) {
-      if (!player.isJumping && !player.isOnGround) {
-        if (this._onAir.has(player.id)) {
-          this._entityIds.add(player.id);
-        } else this._onAir.add(player.id);
-      } else if (player.isJumping && !player.isOnGround && this._entityIds.has(player.id) && !this._events.has(player.id)) {
-        this._events.set(player.id, new PlayerOnAirJumpAfterEvent(player));
-        cb(this._events.get(player.id));
-      } else {
-        this._events.delete(player.id);
-        this._entityIds.delete(player.id);
-        this._onAir.delete(player.id);
-      }
-    }
-  }
-};
-var PlayerOnEquipAfterEventSignal = class extends EntityEventSignal {
-  constructor() {
-    super();
-    this._previousEquipments = /* @__PURE__ */ new Map();
-  }
-  _run(cb) {
-    for (const player of world.players) {
-      let slots = Object.values(EquipmentSlot);
-      const currentEquipments = /* @__PURE__ */ new Map();
-      for (const slot of slots) {
-        const item = player.getEquipment(slot);
-        if (item) currentEquipments.set(slot, item);
-      }
-      const previousEquipments = this._previousEquipments.get(player.id) || currentEquipments;
-      for (const [slot, itemStack] of currentEquipments) {
-        const prevItemStack = previousEquipments.get(slot);
-        if (!itemStack.compare(prevItemStack) && !this._entityIds.has(player.id)) {
-          this._entityIds.add(player.id);
-          this._events.set(player.id, new PlayerOnEquipAfterEvent(player, itemStack, slot));
-          cb(this._events.get(player.id));
-        } else if (itemStack.compare(prevItemStack) && this._entityIds.has(player.id)) {
-          this._events.delete(player.id);
-          this._entityIds.delete(player.id);
-        }
-      }
-      this._previousEquipments.set(player.id, currentEquipments);
-    }
-  }
-};
-var PlayerOnUnequipAfterEventSignal = class extends EntityEventSignal {
-  constructor() {
-    super();
-    this._previousEquipments = /* @__PURE__ */ new Map();
-  }
-  _run(cb) {
-    for (const player of world.players) {
-      let slots = Object.values(EquipmentSlot);
-      const currentEquipments = /* @__PURE__ */ new Map();
-      for (const slot of slots) {
-        const item = player.getEquipment(slot);
-        if (item) currentEquipments.set(slot, item);
-      }
-      const previousEquipments = this._previousEquipments.get(player.id) || currentEquipments;
-      for (const [slot, itemStack] of currentEquipments) {
-        const prevItemStack = previousEquipments.get(slot);
-        if (prevItemStack) {
-          if (!prevItemStack.compare(itemStack) && !this._entityIds.has(player.id)) {
-            this._entityIds.add(player.id);
-            this._events.set(player.id, new PlayerOnUnequipAfterEvent(player, prevItemStack, slot));
-            cb(this._events.get(player.id));
-          } else if (prevItemStack.compare(itemStack) && this._entityIds.has(player.id)) {
-            this._events.delete(player.id);
-            this._entityIds.delete(player.id);
-          }
-        }
-      }
-      this._previousEquipments.set(player.id, currentEquipments);
-    }
-  }
-};
-var PlayerOnLandAfterEventSignal = class extends EntityEventSignal {
-  constructor() {
-    super();
-  }
-  _run(cb) {
-    for (const player of world.players) {
-      if (!player.isOnGround && !this._entityIds.has(player.id)) {
-        this._entityIds.add(player.id);
-      } else if (player.isOnGround && this._entityIds.has(player.id)) {
-        this._events.set(player.id, new PlayerOnLandAfterEvent(player));
-        cb(this._events.get(player.id));
-        this._events.delete(player.id);
-        this._entityIds.delete(player.id);
-      }
-    }
-  }
-};
-var Run = class {
-  constructor() {
-    this._process = null;
-  }
-  dispose() {
-    system2.clearRun(this._process);
-  }
-};
-var RunInterval = class extends Run {
-  constructor(cb, interval = 1) {
-    super();
-    this._process = system2.runInterval(cb, interval);
-  }
-};
-var RunTimeOut = class extends Run {
-  constructor(cb, timeOut = 1) {
-    super();
-    this._process = system2.runTimeout(cb, timeOut);
-  }
-};
-var CountDownTimer = class {
-  constructor(durationInSeconds = 10, onEnd = () => {
-  }, onUpdate = () => {
-  }) {
-    this.minutes = 0;
-    this.seconds = "00";
-    this.timer = durationInSeconds;
-    this.process = new RunInterval(() => {
-      this.minutes = Math.floor(this.timer / 60);
-      this.seconds = this.timer % 60;
-      this.seconds = this.seconds < 10 ? "0" + this.seconds : this.seconds;
-      onUpdate(this.minutes, this.seconds);
-      if (--this.timer < -1) {
-        onEnd();
-        this.process.dispose();
-        return;
-      }
-    }, 20);
-  }
-  dispose() {
-    this.process.dispose();
-  }
-};
-var DebugStickInspector = class {
-  constructor() {
-    this._interval = new RunInterval(() => this._updatePlayers(), 1);
-  }
-  dispose() {
-    this._interval?.dispose();
-  }
-  _updatePlayers() {
-    for (const player of world.getAllPlayers()) {
-      const mainhand = player.getEquipment(EquipmentSlot.Mainhand);
-      if (!mainhand || mainhand.typeId !== "minecraft:debug_stick") continue;
-      let target = player.getEntitiesFromViewDirection({
-        includeLiquidBlocks: true,
-        includePassableBlocks: true
-      })[0];
-      if (!target) {
-        target = player.getBlockFromViewDirection({
-          includeLiquidBlocks: true,
-          includePassableBlocks: true,
-          maxDistance: 7
-        });
-      }
-      let actionBarText = "No selected Block/Entity";
-      if (target && "block" in target && target.block) {
-        const block = target.block;
-        actionBarText = {
-          rawtext: [
-            { text: `\xA7bBlock\xA7r: \xA7f${block.typeId}
-\xA7r` },
-            { text: `\xA7bFace\xA7r: \xA7f${target.face}
-\xA7r` },
-            { text: `\xA7bData\xA7r: \xA7f${JSON.stringify(block.permutation.getAllStates(), null, 2)}\xA7r` }
-          ]
-        };
-      } else if (target && "entity" in target && target.entity) {
-        const entity = target.entity;
-        const entityData = {
-          dynamicProperties: entity.getDynamicPropertyIds()
-        };
-        actionBarText = {
-          rawtext: [
-            { text: `\xA7bEntity\xA7r: \xA7f${entity.typeId}
-\xA7r` },
-            { text: `\xA7bHealth\xA7r: \xA7f${entity.health}/${entity.maxHealth}
-\xA7r` },
-            { text: `\xA7bFamilies\xA7r: \xA7f[${entity.getTypeFamilies()}]
-\xA7r` },
-            { text: `\xA7bData\xA7r: \xA7f${JSON.stringify(entityData, null, 2)}\xA7r` }
-          ]
-        };
-      }
-      player.setActionBar(actionBarText);
-    }
-  }
-};
-var ScriptEventManager = class {
-  constructor() {
-    this._events = /* @__PURE__ */ new Map();
-  }
-  addEvent(eventName, callback) {
-    const event = system2.afterEvents.scriptEventReceive.subscribe((e) => {
-      if (e.id === eventName) {
-        callback(e);
-      }
-    });
-    this._events.set(eventName, event);
-  }
-  removeEvent(eventName) {
-    const event = this._events.get(eventName);
-    if (event) {
-      system2.afterEvents.scriptEventReceive.unsubscribe(event);
-      this._events.delete(eventName);
-    }
-  }
-  clearEvents() {
-    for (const [eventName, event] of this._events) {
-      system2.afterEvents.scriptEventReceive.unsubscribe(event);
-    }
-    this._events.clear();
-  }
-};
-var CommandResult = class {
-  constructor() {
-    this.successCount = 0;
-  }
-};
-var Fade = class {
-  constructor(fadeIn, fadeHold, fadeOut) {
-    this.fadeIn = fadeIn;
-    this.fadeHold = fadeHold;
-    this.fadeOut = fadeOut;
-  }
-};
-var Scene = class {
-  constructor(posStart, posEnd, rotStart, rotEnd, duration, fade, ease_type = "linear") {
-    this.posStart = posStart;
-    this.posEnd = posEnd;
-    this.rotStart = rotStart;
-    this.rotEnd = rotEnd;
-    this.duration = duration;
-    this.fade = fade;
-    this.ease_type = ease_type;
-  }
-};
-var TimedCommand = class {
-  constructor(time, commands) {
-    this.time = time;
-    this.timeTick = time * tps;
-    this.commands = commands;
-  }
-};
-var Cutscene = class {
-  constructor(target, scenes, timedCommands = [], is_spectator = true, is_invisible = true) {
-    this.target = target;
-    this.scenes = scenes;
-    this.timedCommands = timedCommands;
-    this.is_spectator = is_spectator;
-    this.is_invisible = is_invisible;
-  }
-  play() {
-    const entities = world.getEntities(this.target);
-    for (const entity of entities) {
-      entity.commandRun(`inputpermission set @s camera disabled`, `inputpermission set @s movement disabled`);
-      entity.commandRun("hud @s hide all");
-      const checkpoint = { pos: entity.location, rot: entity.rotation };
-      let originalGamemode = null;
-      if (this.is_spectator) {
-        const currentGamemode = entity.gamemode?.toString?.() || entity.gamemode || "adventure";
-        originalGamemode = currentGamemode === "spectator" ? "adventure" : currentGamemode;
-        entity.commandRun(`gamemode spectator @s`);
-      }
-      if (this.is_invisible) entity.commandRun(`effect @s invisibility infinite 0 true`);
-      this.timedCommands.forEach((timedCommand) => {
-        entity.timedCommand(timedCommand.time, timedCommand.commands);
-      });
-      let timeline = 0;
-      this.scenes.forEach((scene, i) => {
-        const fade = scene.fade;
-        let fadeInTime = 0;
-        if (fade) {
-          system2.runTimeout(() => {
-            entity.camera.fade({
-              fadeInTime: fade.fadeIn,
-              holdTime: fade.fadeHold,
-              fadeOutTime: fade.fadeOut
-            });
-          }, timeline);
-          fadeInTime = fade.fadeIn;
-        }
-        const endTime = scene.duration * tps + fadeInTime * tps;
-        system2.runTimeout(() => {
-          system2.runTimeout(() => {
-            entity.teleport(scene.posStart, { facingLocation: scene.rotStart });
-          }, fadeInTime * tps);
-          system2.runTimeout(() => {
-            entity.commandRun(
-              `camera @s set minecraft:free pos ${scene.posStart.toString()} facing ${scene.rotStart.toString()}`,
-              `camera @s set minecraft:free ease ${scene.duration} ${scene.ease_type} pos ${scene.posEnd.toString()} facing ${scene.rotEnd.toString()}`
-            );
-          }, fadeInTime * tps);
-          system2.runTimeout(() => {
-            entity.commandRun(`camera @s clear`);
-            entity.commandRun("hud @s reset all");
-            if (i === this.scenes.length - 1) {
-              if (this.is_spectator) {
-                if (originalGamemode) {
-                  entity.commandRun(`gamemode ${originalGamemode} @s`);
-                } else {
-                  entity.commandRun(`gamemode adventure @s`);
-                }
-              }
-              if (this.is_invisible) entity.commandRun(`effect @s invisibility 0`);
-              entity.commandRun(
-                `inputpermission set @s camera enabled`,
-                `inputpermission set @s movement enabled`
-              );
-              entity.teleport(checkpoint.pos, { rotation: checkpoint.rot });
-            }
-          }, endTime);
-        }, timeline);
-        timeline += endTime;
-      });
-    }
-  }
-};
 
-// src/extension.ts
+// src/constants.ts
+import {
+  world as w,
+  system as s
+} from "@minecraft/server";
+var namespace = "eternal";
+var world4 = w;
+var system4 = s;
+var afterEvents = w.afterEvents;
+var beforeEvents = w.beforeEvents;
+var scriptEvent = s.afterEvents.scriptEventReceive;
+
+// src/server_extension.ts
 import {
   Dimension as Dimension2,
   Entity as Entity3,
   BlockPermutation,
-  Player as Player2,
+  Player as Player3,
   WorldAfterEvents as WorldAfterEvents2,
   EntityComponentTypes,
   Container,
   ItemStack as ItemStack2,
-  World,
+  World as World2,
   Block,
   ItemComponentTypes,
-  ScriptEventCommandMessageAfterEvent as ScriptEventCommandMessageAfterEvent2,
+  ScriptEventCommandMessageAfterEvent,
   ScriptEventSource,
-  EquipmentSlot as EquipmentSlot2,
+  EquipmentSlot as EquipmentSlot3,
   GameMode,
   DimensionTypes,
   BlockComponentTypes,
   BlockTypes,
   WeatherType as WeatherType2,
-  world as world4,
+  world as world7,
   InputPermissionCategory
 } from "@minecraft/server";
 
 // src/utils.ts
-import { Entity as Entity2, Dimension, world as world2 } from "@minecraft/server";
+import { Entity as Entity2, Dimension, world as world5 } from "@minecraft/server";
 var entityRunCommand = Entity2.prototype.runCommand;
 var dimensionRunCommand = Dimension.prototype.runCommand;
 function defineProperties(target, properties) {
@@ -704,19 +649,15 @@ function idTranslate(id) {
   return id.split(":")[1].split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 }
 function runCommand(source, ...commands) {
-  const result = new CommandResult();
+  let result = { successCount: 0 };
   const flattenedCommands = commands.flat();
   flattenedCommands.forEach((command) => {
     if (source === Entity2) {
       const cr = entityRunCommand.call(this, command);
-      if (cr.successCount > 0) {
-        result.successCount++;
-      }
+      if (cr.successCount > 0) result.successCount++;
     } else if (source === Dimension) {
       const cr = dimensionRunCommand.call(this, command);
-      if (cr.successCount > 0) {
-        result.successCount++;
-      }
+      if (cr.successCount > 0) result.successCount++;
     }
   });
   return result;
@@ -725,7 +666,7 @@ function display(value, type = "chat") {
   value = JSON.stringify(value, null, 0);
   switch (type) {
     case "chat":
-      world2.sendMessage(`${value}`);
+      world5.sendMessage(`${value}`);
       break;
     case "error":
       console.error(value);
@@ -734,7 +675,7 @@ function display(value, type = "chat") {
       console.log(value);
       break;
     default:
-      world2.sendMessage(`${value}`);
+      world5.sendMessage(`${value}`);
       break;
   }
 }
@@ -762,26 +703,26 @@ function objectsEqual(obj1, obj2) {
 }
 
 // src/events.ts
-import { world as world3 } from "@minecraft/server";
+import { world as world6 } from "@minecraft/server";
 var playersUsingItem = /* @__PURE__ */ new Set();
-world3.afterEvents.itemUse.subscribe((e) => {
+world6.afterEvents.itemUse.subscribe((e) => {
   const { source: player } = e;
   playersUsingItem.add(player.id);
 });
-world3.afterEvents.itemStopUse.subscribe((e) => {
+world6.afterEvents.itemStopUse.subscribe((e) => {
   const { source: player } = e;
   if (playersUsingItem.has(player.id)) playersUsingItem.delete(player.id);
 });
 var weatherTracker = /* @__PURE__ */ new Map();
-world3.beforeEvents.weatherChange.subscribe((e) => {
+world6.beforeEvents.weatherChange.subscribe((e) => {
   const { previousWeather, duration } = e;
-  if (duration == world3.getTimeOfDay()) {
+  if (duration == world6.getTimeOfDay()) {
     weatherTracker.set(duration, previousWeather);
     e.cancel = true;
   }
 });
 
-// src/extension.ts
+// src/server_extension.ts
 defineProperties(WorldAfterEvents2.prototype, {
   entityJump: {
     get: function() {
@@ -829,7 +770,7 @@ defineProperties(WorldAfterEvents2.prototype, {
     }
   }
 });
-defineProperties(World.prototype, {
+defineProperties(World2.prototype, {
   end: {
     get: function() {
       return this.getDimension("minecraft:the_end");
@@ -1016,7 +957,7 @@ defineProperties(Block.prototype, {
     }
   }
 });
-defineProperties(Player2.prototype, {
+defineProperties(Player3.prototype, {
   clearItem: {
     value: function(typeId, maxCount = "", data = -1) {
       this.runCommand(`clear @s ${typeId} ${data} ${maxCount}`);
@@ -1054,7 +995,7 @@ defineProperties(Player2.prototype, {
   getItems: {
     value: function(typeId) {
       const eMap = /* @__PURE__ */ new Map();
-      const slots = Object.values(EquipmentSlot2).filter((value) => typeof value === "string");
+      const slots = Object.values(EquipmentSlot3).filter((value) => typeof value === "string");
       for (const slot of slots) {
         const item = this.getEquipment(slot);
         if (item) {
@@ -1121,6 +1062,60 @@ defineProperties(Player2.prototype, {
   }
 });
 defineProperties(Entity3.prototype, {
+  equippableComponent: {
+    get: function() {
+      return this.getComponent(EntityComponentTypes.Equippable);
+    },
+    enumerable: true
+  },
+  healthComponent: {
+    get: function() {
+      return this.getComponent(EntityComponentTypes.Health);
+    },
+    enumerable: true
+  },
+  inventoryComponent: {
+    get: function() {
+      return this.getComponent(EntityComponentTypes.Inventory);
+    },
+    enumerable: true
+  },
+  itemComponent: {
+    get: function() {
+      return this.getComponent(EntityComponentTypes.Item);
+    },
+    enumerable: true
+  },
+  movementComponent: {
+    get: function() {
+      return this.getComponent(EntityComponentTypes.Movement);
+    },
+    enumerable: true
+  },
+  projectileComponent: {
+    get: function() {
+      return this.getComponent(EntityComponentTypes.Projectile);
+    },
+    enumerable: true
+  },
+  tameableComponent: {
+    get: function() {
+      return this.getComponent(EntityComponentTypes.Tameable);
+    },
+    enumerable: true
+  },
+  typeFamilyComponent: {
+    get: function() {
+      return this.getComponent(EntityComponentTypes.TypeFamily);
+    },
+    enumerable: true
+  },
+  //
+  typeFamilies: {
+    get: function() {
+      return this.typeFamilyComponent?.getTypeFamilies() ?? [];
+    }
+  },
   addItem: {
     value: function(itemStack) {
       this.inventory?.addItem(itemStack);
@@ -1137,7 +1132,13 @@ defineProperties(Entity3.prototype, {
   },
   commandRun: {
     value: function(...commands) {
-      return runCommand.call(this, Entity3, ...commands);
+      let result = { successCount: 0 };
+      const flattenedCommands = commands.flat();
+      flattenedCommands.forEach((command) => {
+        const cr = this.runCommand(command);
+        if (cr.successCount > 0) result.successCount++;
+      });
+      return result;
     }
   },
   coordinates: {
@@ -1172,12 +1173,6 @@ defineProperties(Entity3.prototype, {
           break;
       }
     }
-  },
-  equippableComponent: {
-    get: function() {
-      return this.getComponent(EntityComponentTypes.Equippable);
-    },
-    enumerable: true
   },
   getEquipment: {
     value: function(slot) {
@@ -1214,12 +1209,6 @@ defineProperties(Entity3.prototype, {
     },
     enumerable: true
   },
-  healthComponent: {
-    get: function() {
-      return this.getComponent(EntityComponentTypes.Health);
-    },
-    enumerable: true
-  },
   hx: {
     get: function() {
       return this.headLocation.x;
@@ -1244,12 +1233,6 @@ defineProperties(Entity3.prototype, {
     },
     enumerable: true
   },
-  inventoryComponent: {
-    get: function() {
-      return this.getComponent(EntityComponentTypes.Inventory);
-    },
-    enumerable: true
-  },
   isPlayer: {
     get: function() {
       return this.typeId === "minecraft:player";
@@ -1262,12 +1245,6 @@ defineProperties(Entity3.prototype, {
     },
     enumerable: true
   },
-  itemComponent: {
-    get: function() {
-      return this.getComponent(EntityComponentTypes.Item);
-    },
-    enumerable: true
-  },
   maxHealth: {
     get: function() {
       return this.healthComponent?.effectiveMax || 0;
@@ -1277,18 +1254,6 @@ defineProperties(Entity3.prototype, {
   missingHealth: {
     get: function() {
       return this.maxHealth - this.health;
-    },
-    enumerable: true
-  },
-  movementComponent: {
-    get: function() {
-      return this.getComponent(EntityComponentTypes.Movement);
-    },
-    enumerable: true
-  },
-  projectileComponent: {
-    get: function() {
-      return this.getComponent(EntityComponentTypes.Projectile);
     },
     enumerable: true
   },
@@ -1327,18 +1292,42 @@ defineProperties(Entity3.prototype, {
       return this.equippableComponent?.setEquipment(slot, item);
     }
   },
+  setMainhand: {
+    value: function(item) {
+      this.setEquipment?.(EquipmentSlot3.Mainhand, item);
+    }
+  },
+  setOffhand: {
+    value: function(item) {
+      this.setEquipment?.(EquipmentSlot3.Offhand, item);
+    }
+  },
+  setHead: {
+    value: function(item) {
+      this.setEquipment?.(EquipmentSlot3.Head, item);
+    }
+  },
+  setChest: {
+    value: function(item) {
+      this.setEquipment?.(EquipmentSlot3.Chest, item);
+    }
+  },
+  setLegs: {
+    value: function(item) {
+      this.setEquipment?.(EquipmentSlot3.Legs, item);
+    }
+  },
+  setFeet: {
+    value: function(item) {
+      this.setEquipment?.(EquipmentSlot3.Feet, item);
+    }
+  },
   speed: {
     get: function() {
       return this.movementComponent?.currentValue ?? 0;
     },
     set: function(value) {
       return this.movementComponent?.setCurrentValue(value);
-    },
-    enumerable: true
-  },
-  tameableComponent: {
-    get: function() {
-      return this.getComponent(EntityComponentTypes.Tameable);
     },
     enumerable: true
   },
@@ -1349,12 +1338,6 @@ defineProperties(Entity3.prototype, {
     set: function(player) {
       return this.tameableComponent?.tame(player);
     }
-  },
-  typeFamilyComponent: {
-    get: function() {
-      return this.getComponent(EntityComponentTypes.TypeFamily);
-    },
-    enumerable: true
   },
   toItemStack: {
     value: function() {
@@ -1374,7 +1357,7 @@ defineProperties(Entity3.prototype, {
     },
     enumerable: true
   },
-  // --- axis/coord shorthands ---
+  // axis/coord
   cx: {
     get: function() {
       return this.coordinates.x;
@@ -1538,7 +1521,7 @@ defineProperties(BlockPermutation.prototype, {
     }
   }
 });
-defineProperties(ScriptEventCommandMessageAfterEvent2.prototype, {
+defineProperties(ScriptEventCommandMessageAfterEvent.prototype, {
   source: {
     get: function() {
       switch (this.sourceType) {
@@ -1558,12 +1541,18 @@ defineProperties(ScriptEventCommandMessageAfterEvent2.prototype, {
 defineProperties(Dimension2.prototype, {
   commandRun: {
     value: function(...commands) {
-      return runCommand.call(this, Dimension2, ...commands);
+      let result = { successCount: 0 };
+      const flattenedCommands = commands.flat();
+      flattenedCommands.forEach((command) => {
+        const cr = this.runCommand(command);
+        if (cr.successCount > 0) result.successCount++;
+      });
+      return result;
     }
   },
   weather: {
     get: function() {
-      const eventId = world4.getTimeOfDay();
+      const eventId = world7.getTimeOfDay();
       const weatherTypes = Object.values(WeatherType2);
       for (const weatherType of weatherTypes) {
         this.setWeather(weatherType, eventId);
@@ -1581,7 +1570,7 @@ defineProperties(Dimension2.prototype, {
   }
 });
 
-// src/javascript.ts
+// src/js_extension.ts
 Math.randomInt = function(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
@@ -1755,9 +1744,6 @@ defineProperties(Map.prototype, {
   }
 });
 export {
-  AfterEvent,
-  BeforeEvent,
-  CommandResult,
   CountDownTimer,
   Cutscene,
   DebugStickInspector,
@@ -1773,9 +1759,7 @@ export {
   EntityStopJumpingAfterEventSignal,
   EntityUnsneakAfterEvent,
   EntityUnsneakAfterEventSignal,
-  Event,
   EventSignal,
-  Fade,
   ItemAfterEvent,
   PlayerAfterEvent,
   PlayerOnAirJumpAfterEvent,
@@ -1789,9 +1773,6 @@ export {
   Run,
   RunInterval,
   RunTimeOut,
-  Scene,
-  ScriptEventManager,
-  TimedCommand,
   Vector2,
   Vector3,
   afterEvents,
@@ -1803,9 +1784,10 @@ export {
   getRandomElement,
   idTranslate,
   namespace,
-  ns,
+  playersUsingItem,
   runCommand,
   scriptEvent,
-  system,
-  tps
+  system4 as system,
+  weatherTracker,
+  world4 as world
 };

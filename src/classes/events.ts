@@ -1,16 +1,16 @@
 import { Entity, Player, ItemStack, EquipmentSlot, system, world } from "@minecraft/server";
 
-export class Event {
+class Event {
   constructor() {}
 }
 
-export class AfterEvent extends Event {
+class AfterEvent extends Event {
   constructor() {
     super();
   }
 }
 
-export class BeforeEvent extends Event {
+class BeforeEvent extends Event {
   cancel: boolean;
   constructor() {
     super();
@@ -24,16 +24,16 @@ export class EntityAfterEvent extends AfterEvent {
     this.entity = entity;
   }
 }
-export class EntityOnGroundAfterEvent extends EntityAfterEvent {
-  constructor(entity: Entity) {
-    super(entity);
-  }
-}
 export class PlayerAfterEvent extends AfterEvent {
   player: Player;
   constructor(player: Player) {
     super();
     this.player = player;
+  }
+}
+export class EntityOnGroundAfterEvent extends EntityAfterEvent {
+  constructor(entity: Entity) {
+    super(entity);
   }
 }
 export class EntityJumpAfterEvent extends EntityAfterEvent {

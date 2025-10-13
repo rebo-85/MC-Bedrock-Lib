@@ -1,26 +1,7 @@
-import { world, system } from "@minecraft/server";
+import { world, system, Player, CameraFadeOptions } from "@minecraft/server";
 
-export interface Fade {
-  fadeIn: number;
-  fadeHold: number;
-  fadeOut: number;
-}
-
-export interface Scene {
-  posStart: any;
-  posEnd: any;
-  rotStart: any;
-  rotEnd: any;
-  duration: number;
-  fade: Fade;
-  ease_type: string;
-}
-
-export interface TimedCommand {
-  time: number;
-  timeTick: number;
-  commands: string[];
-}
+import { Scene, TimedCommand } from "../interface";
+import { RunTimeOut } from "./utils";
 
 export class Cutscene {
   target: any;
@@ -44,24 +25,23 @@ export class Cutscene {
   play() {
     const entities = world.getEntities(this.target);
     for (const entity of entities) {
-      (entity as any)
-        .commandRun(
-          `inputpermission set @s camera disabled`,
-          `inputpermission set @s movement disabled`
-        )(entity as any)
-        .commandRun("hud @s hide all");
-      const checkpoint = { pos: (entity as any).location, rot: (entity as any).rotation };
+      const player: Player = entity as Player;
+      player.commandRun(`inputpermission set @s camera disabled`, `inputpermission set @s movement disabled`);
+      player.commandRun("hud @s hide all");
+      const checkpoint = { pos: player.location, rot: player.rotation };
 
       let originalGamemode: string | null = null;
       if (this.is_spectator) {
-        const currentGamemode = (entity as any).gamemode?.toString?.() || (entity as any).gamemode || "adventure";
+        const currentGamemode = player.gamemode?.toString?.() || player.gamemode || "adventure";
         originalGamemode = currentGamemode === "spectator" ? "adventure" : currentGamemode;
-        (entity as any).commandRun(`gamemode spectator @s`);
+        player.commandRun(`gamemode spectator @s`);
       }
-      if (this.is_invisible) (entity as any).commandRun(`effect @s invisibility infinite 0 true`);
+      if (this.is_invisible) player.commandRun(`effect @s invisibility infinite 0 true`);
 
       this.timedCommands.forEach((timedCommand) => {
-        (entity as any).timedCommand(timedCommand.time, timedCommand.commands);
+        new RunTimeOut(() => {
+          player.commandRun(timedCommand.commands);
+        }, timedCommand.timeTick);
       });
 
       let timeline = 0;
@@ -70,10 +50,12 @@ export class Cutscene {
         let fadeInTime = 0;
         if (fade) {
           system.runTimeout(() => {
-            (entity as any).camera.fade({
-              fadeInTime: fade.fadeIn,
-              holdTime: fade.fadeHold,
-              fadeOutTime: fade.fadeOut,
+            player.camera.fade({
+              fadeTime: {
+                fadeInTime: fade.fadeIn,
+                holdTime: fade.fadeHold,
+                fadeOutTime: fade.fadeOut,
+              },
             });
           }, timeline);
           fadeInTime = fade.fadeIn;
@@ -82,11 +64,11 @@ export class Cutscene {
         const endTime = scene.duration * 20 + fadeInTime * 20;
         system.runTimeout(() => {
           system.runTimeout(() => {
-            (entity as any).teleport(scene.posStart, { facingLocation: scene.rotStart });
+            player.teleport(scene.posStart, { facingLocation: scene.rotStart });
           }, fadeInTime * 20);
 
           system.runTimeout(() => {
-            (entity as any).commandRun(
+            player.commandRun(
               `camera @s set minecraft:free pos ${scene.posStart.toString()} facing ${scene.rotStart.toString()}`,
               `camera @s set minecraft:free ease ${scene.duration} ${
                 scene.ease_type
@@ -95,25 +77,19 @@ export class Cutscene {
           }, fadeInTime * 20);
 
           system.runTimeout(() => {
-            (entity as any)
-              .commandRun(`camera @s clear`)(entity as any)
-              .commandRun("hud @s reset all");
+            player.commandRun(`camera @s clear`);
+            player.commandRun("hud @s reset all");
             if (i === this.scenes.length - 1) {
               if (this.is_spectator) {
                 if (originalGamemode) {
-                  (entity as any).commandRun(`gamemode ${originalGamemode} @s`);
+                  player.commandRun(`gamemode ${originalGamemode} @s`);
                 } else {
-                  (entity as any).commandRun(`gamemode adventure @s`);
+                  player.commandRun(`gamemode adventure @s`);
                 }
               }
-              if (this.is_invisible)
-                (entity as any)
-                  .commandRun(`effect @s invisibility 0`)(entity as any)
-                  .commandRun(
-                    `inputpermission set @s camera enabled`,
-                    `inputpermission set @s movement enabled`
-                  )(entity as any)
-                  .teleport(checkpoint.pos, { rotation: checkpoint.rot });
+              if (this.is_invisible) player.commandRun(`effect @s invisibility 0`);
+              player.commandRun(`inputpermission set @s camera enabled`, `inputpermission set @s movement enabled`);
+              player.teleport(checkpoint.pos, { rotation: checkpoint.rot });
             }
           }, endTime);
         }, timeline);
