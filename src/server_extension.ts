@@ -38,15 +38,15 @@ import {
   EntityTypeFamilyComponent,
 } from "@minecraft/server";
 import {
-  EntityJumpAfterEventSignal,
-  EntityStartJumpingAfterEventSignal,
-  EntityStopJumpingAfterEventSignal,
-  EntitySneakAfterEventSignal,
+  PlayerJumpAfterEventSignal,
+  PlayerStartJumpingAfterEventSignal,
+  PlayerStopJumpingAfterEventSignal,
   EntityUnsneakAfterEventSignal,
   PlayerOnAirJumpAfterEventSignal,
-  PlayerOnLandAfterEventSignal,
   PlayerOnEquipAfterEventSignal,
   PlayerOnUnequipAfterEventSignal,
+  EntityOnGroundAfterEventSignal,
+  EntitySneakAfterEventSignal,
 } from "./classes/index";
 
 import { Vector3, Vector2 } from "./classes/index";
@@ -56,29 +56,19 @@ import { playersUsingItem, weatherTracker } from "./events";
 
 // WorldAfterEvents
 defineProperties(WorldAfterEvents.prototype, {
-  entityJump: {
-    get: function (): EntityJumpAfterEventSignal {
-      return new EntityJumpAfterEventSignal();
-    },
-  },
   entitySneak: {
     get: function (): EntitySneakAfterEventSignal {
       return new EntitySneakAfterEventSignal();
     },
   },
-  entityStartJumping: {
-    get: function (): EntityStartJumpingAfterEventSignal {
-      return new EntityStartJumpingAfterEventSignal();
-    },
-  },
-  entityStopJumping: {
-    get: function (): EntityStopJumpingAfterEventSignal {
-      return new EntityStopJumpingAfterEventSignal();
-    },
-  },
   entityUnsneak: {
     get: function (): EntityUnsneakAfterEventSignal {
       return new EntityUnsneakAfterEventSignal();
+    },
+  },
+  entityOnGround: {
+    get: function (): EntityOnGroundAfterEventSignal {
+      return new EntityOnGroundAfterEventSignal();
     },
   },
   playerOnAirJump: {
@@ -91,14 +81,24 @@ defineProperties(WorldAfterEvents.prototype, {
       return new PlayerOnEquipAfterEventSignal();
     },
   },
-  playerOnLand: {
-    get: function (): PlayerOnLandAfterEventSignal {
-      return new PlayerOnLandAfterEventSignal();
-    },
-  },
   playerOnUnequip: {
     get: function (): PlayerOnUnequipAfterEventSignal {
       return new PlayerOnUnequipAfterEventSignal();
+    },
+  },
+  playerJump: {
+    get: function (): PlayerJumpAfterEventSignal {
+      return new PlayerJumpAfterEventSignal();
+    },
+  },
+  playerStartJumping: {
+    get: function (): PlayerStartJumpingAfterEventSignal {
+      return new PlayerStartJumpingAfterEventSignal();
+    },
+  },
+  playerStopJumping: {
+    get: function (): PlayerStopJumpingAfterEventSignal {
+      return new PlayerStopJumpingAfterEventSignal();
     },
   },
 });
@@ -390,9 +390,9 @@ defineProperties(Player.prototype, {
       (this as Player).inputPermissions.setPermissionCategory(InputPermissionCategory.Movement, value);
     },
   },
-  isMortal: {
+  isInvulnerable: {
     get: function (): boolean {
-      return (this as Player).gamemode === GameMode.Survival || (this as Player).gamemode === GameMode.Adventure;
+      return (this as Player).gamemode === GameMode.Creative || (this as Player).gamemode === GameMode.Spectator;
     },
     enumerable: true,
   },

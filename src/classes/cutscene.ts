@@ -1,27 +1,33 @@
-import { world, system, Player, CameraFadeOptions } from "@minecraft/server";
-
-import { Scene, TimedCommand } from "../interface";
+import { world, system, Player } from "@minecraft/server";
+import { Scene, TimedCommand, CutsceneOptions } from "../interface";
 import { RunTimeOut } from "./utils";
 
+/**
+ * Handles cutscene playback for a set of players/entities.
+ * Applies camera, HUD, gamemode, and timed command effects.
+ */
 export class Cutscene {
   target: any;
   scenes: Scene[];
   timedCommands: TimedCommand[];
   is_invisible: boolean;
   is_spectator: boolean;
-  constructor(
-    target: any,
-    scenes: Scene[],
-    timedCommands: TimedCommand[] = [],
-    is_spectator: boolean = true,
-    is_invisible: boolean = true
-  ) {
-    this.target = target;
-    this.scenes = scenes;
-    this.timedCommands = timedCommands;
-    this.is_spectator = is_spectator;
-    this.is_invisible = is_invisible;
+
+  /**
+   * @param {CutsceneOptions} opts - Cutscene configuration (target, scenes, etc)
+   */
+  constructor(opts: CutsceneOptions) {
+    this.target = opts.target;
+    this.scenes = opts.scenes;
+    this.timedCommands = opts.timedCommands ?? [];
+    this.is_spectator = opts.is_spectator ?? true;
+    this.is_invisible = opts.is_invisible ?? true;
   }
+
+  /**
+   * Starts the cutscene for all matching entities.
+   * Applies camera, gamemode, invisibility, and runs scene timeline.
+   */
   play() {
     const entities = world.getEntities(this.target);
     for (const entity of entities) {

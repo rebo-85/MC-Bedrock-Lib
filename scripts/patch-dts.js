@@ -41,3 +41,17 @@ while ((match = modulePattern.exec(srcContent)) !== null) {
 }
 
 if (patch) fs.appendFileSync(out, patch);
+
+const patchedContent = fs.readFileSync(out, "utf8");
+const propertyRegex = /^(\s*)([a-zA-Z0-9_]+)\s*[:(]/gm;
+
+function addPropertyComments(dtsContent) {
+  return dtsContent.replace(propertyRegex, (match, indent, prop) => {
+    const before = dtsContent.slice(dtsContent.indexOf(match) - 3, dtsContent.indexOf(match));
+    if (before.includes("/**")) return match;
+    return match;
+  });
+}
+
+const commented = addPropertyComments(patchedContent);
+fs.writeFileSync(out, commented);

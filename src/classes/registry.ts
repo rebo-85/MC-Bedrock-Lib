@@ -1,16 +1,26 @@
-import { BlockCustomComponent, StartupEvent } from "@minecraft/server";
-import { systemBeforeEvents as sbe } from "../constants";
+import {
+  BlockCustomComponent,
+  ItemCustomComponent,
+  StartupEvent,
+  CustomCommand,
+  CustomCommandOrigin,
+  CustomCommandResult,
+  StartupBeforeEventSignal,
+  system,
+} from "@minecraft/server";
 
-class Registry<T> {
-  registry: Map<string, T>;
+class Registry<key, value> {
+  protected registry: Map<key, value>;
+  protected startup: StartupBeforeEventSignal;
+
   constructor() {
     this.registry = new Map();
-    if (!sbe?.startup) return;
+    this.startup = system.beforeEvents.startup;
   }
-  add(id: string, comp: T) {
+  add(id: key, comp: value) {
     this.registry.set(id, comp);
   }
-  remove(id: string) {
+  remove(id: key) {
     this.registry.delete(id);
   }
   clear() {
@@ -18,15 +28,32 @@ class Registry<T> {
   }
 }
 
-export class BlockRegistry extends Registry<BlockCustomComponent> {
+export class BlockRegistry extends Registry<string, BlockCustomComponent> {
   constructor() {
     super();
-    sbe.startup.subscribe((e: StartupEvent) => {
-      for (const [id, comp] of this.registry) {
-        e.blockComponentRegistry.registerCustomComponent(id, comp);
-      }
+    this.startup.subscribe((e: StartupEvent) => {
+      for (const [id, comp] of this.registry) e.blockComponentRegistry.registerCustomComponent(id, comp);
     });
   }
 }
 
-// TODO: CommandRegistry and ItemRegistry
+export class ItemRegistry extends Registry<string, ItemCustomComponent> {
+  constructor() {
+    super();
+    this.startup.subscribe((e: StartupEvent) => {
+      for (const [id, comp] of this.registry) e.itemComponentRegistry.registerCustomComponent(id, comp);
+    });
+  }
+}
+
+export class CommandRegistry extends Registry<
+  CustomCommand,
+  (origin: CustomCommandOrigin, ...args: any[]) => CustomCommandResult | undefined
+> {
+  constructor() {
+    super();
+    this.startup.subscribe((e) => {
+      for (const [def, cb] of this.registry) e.customCommandRegistry.registerCommand(def, cb);
+    });
+  }
+}

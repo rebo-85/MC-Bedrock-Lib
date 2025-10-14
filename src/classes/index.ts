@@ -4,3 +4,4 @@ export * from "./debugStickInspector";
 export * from "./events";
 export * from "./general";
 export * from "./utils";
+export * from "./registry";

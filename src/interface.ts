@@ -22,3 +22,11 @@ export interface TimedCommand {
   timeTick: number;
   commands: string[];
 }
+
+export interface CutsceneOptions {
+  target: any;
+  scenes: Scene[];
+  timedCommands?: TimedCommand[];
+  is_spectator?: boolean;
+  is_invisible?: boolean;
+}

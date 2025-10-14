@@ -1,17 +1,21 @@
 import { world, EntityRaycastHit, BlockRaycastHit, EquipmentSlot, RawMessage } from "@minecraft/server";
-import { RunInterval } from "./utils";
-export class DebugStickInspector {
-  private _interval: any;
+import { Manager } from "./utils";
 
+/**
+ * DebugStickInspector
+ * Handles debug stick inspection for blocks/entities in-game.
+ * Shows block/entity info in action bar when holding debug stick.
+ */
+export class DebugStickInspector extends Manager {
   constructor() {
-    this._interval = new RunInterval(() => this._updatePlayers(), 1);
+    super();
   }
 
-  dispose() {
-    this._interval?.dispose();
-  }
-
-  private _updatePlayers() {
+  /**
+   * Main tick logic for debug stick inspection.
+   * Iterates players, checks for debug stick, inspects target, updates action bar.
+   */
+  protected _main() {
     for (const player of world.getAllPlayers()) {
       const mainhand = player.getEquipment(EquipmentSlot.Mainhand);
       if (!mainhand || mainhand.typeId !== "minecraft:debug_stick") continue;

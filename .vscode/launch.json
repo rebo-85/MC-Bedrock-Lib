@@ -6,7 +6,7 @@
       "request": "launch",
       "name": "Watch Build",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": ["run", "build"],
       "console": "integratedTerminal"
     }
   ]
