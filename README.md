@@ -40,9 +40,9 @@ import "mc-bedrock-lib";
 ## Example
 
 ```js
-import { world, Vector3 } from "mc-bedrock-lib";
+import { worldAfterEvents, Vector3 } from "mc-bedrock-lib";
 
-world.afterEvents.entityJump.subscribe((e) => {
+worldAfterEvents.entityJump.subscribe((e) => {
   world.sendMessage(`${e.entity.typeId} jumped at ${e.entity.coordinates}`);
 });
 
