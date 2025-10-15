@@ -1,6 +1,6 @@
 {
   "name": "mc-bedrock-lib",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "main": "dist/mc_bedrock_lib.js",
   "types": "dist/mc_bedrock_lib.d.ts",
   "scripts": {
