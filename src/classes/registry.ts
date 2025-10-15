@@ -56,4 +56,10 @@ export class CommandRegistry extends Registry<
       for (const [def, cb] of this.registry) e.customCommandRegistry.registerCommand(def, cb);
     });
   }
+  addEnum(name: string, values: string[]) {
+    if (!name || !Array.isArray(values) || !values.length) return;
+    this.startup.subscribe((e) => {
+      e.customCommandRegistry.registerEnum(name, values);
+    });
+  }
 }
