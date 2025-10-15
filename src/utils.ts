@@ -68,3 +68,12 @@ export function pickKeys<T extends object, K extends keyof T>(obj: T, keys: K[])
   for (const key of keys) if (key in obj) picked[key] = obj[key];
   return picked as Pick<T, K>;
 }
+
+export function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+export function toCommandDecimal(val: number) {
+  const n = Number(val);
+  return n % 1 === 0 ? n.toFixed(1) : n.toFixed(16);
+}

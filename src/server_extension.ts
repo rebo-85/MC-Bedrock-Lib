@@ -11,6 +11,7 @@ import {
   Block,
   ItemComponentTypes,
   ScriptEventCommandMessageAfterEvent,
+  CustomCommandSource,
   ScriptEventSource,
   EquipmentSlot,
   GameMode,
@@ -36,6 +37,7 @@ import {
   EntityTameableComponent,
   RawMessage,
   EntityTypeFamilyComponent,
+  CustomCommandOrigin,
 } from "@minecraft/server";
 import {
   PlayerJumpAfterEventSignal,
@@ -547,8 +549,7 @@ defineProperties(Entity.prototype, {
   },
   getFacingOffset: {
     value: function (distance: number, offset: Vector3 = new Vector3(0, 0, 0)): Vector3 {
-      // offset from view dir
-      const view_dir = new Vector3((this as Entity).vdx, (this as Entity).vdy, (this as Entity).vdz);
+      const view_dir = Vector3.extend((this as Entity).viewDirection);
       const right_dir = new Vector3(-view_dir.z, 0, view_dir.x);
       const normalized_right_dir = right_dir.normalized();
       const end = {
@@ -556,14 +557,13 @@ defineProperties(Entity.prototype, {
         y: view_dir.y * distance + offset.y,
         z: view_dir.z * distance + normalized_right_dir.z * offset.x + offset.z,
       };
-      const head_loc = new Vector3((this as Entity).hx, (this as Entity).hy, (this as Entity).hz);
-      return head_loc.offset(end.x, end.y, end.z);
+      const headLoc = Vector3.extend((this as Entity).headLocation);
+      return headLoc.offset(Vector3.extend(end));
     },
   },
   headLocation: {
     get: function (): Vector3 {
-      const hl = (this as Entity).getHeadLocation();
-      return new Vector3(hl.x, hl.y, hl.z);
+      return Vector3.extend((this as Entity).getHeadLocation());
     },
     enumerable: true,
   },
@@ -647,7 +647,7 @@ defineProperties(Entity.prototype, {
   },
   rotation: {
     get: function (): Vector2 {
-      return new Vector2((this as Entity).getRotation().x, (this as Entity).getRotation().y);
+      return Vector2.extend((this as Entity).getRotation());
     },
     set: function (rotation: Vector2) {
       (this as Entity).setRotation(rotation);
@@ -713,14 +713,13 @@ defineProperties(Entity.prototype, {
   },
   velocity: {
     get: function (): Vector3 {
-      return new Vector3((this as Entity).getVelocity());
+      return Vector3.extend((this as Entity).getVelocity());
     },
     enumerable: true,
   },
   viewDirection: {
     get: function (): Vector3 {
-      const v = (this as Entity).getViewDirection();
-      return new Vector3(v.x, v.y, v.z);
+      return Vector3.extend((this as Entity).getViewDirection());
     },
     enumerable: true,
   },
@@ -897,7 +896,6 @@ defineProperties(BlockPermutation.prototype, {
 defineProperties(ScriptEventCommandMessageAfterEvent.prototype, {
   source: {
     get: function (): Block | Entity | undefined {
-      // see extension.ts for getter logic
       switch ((this as ScriptEventCommandMessageAfterEvent).sourceType) {
         case ScriptEventSource.Block:
           return (this as ScriptEventCommandMessageAfterEvent).sourceBlock;
@@ -905,6 +903,26 @@ defineProperties(ScriptEventCommandMessageAfterEvent.prototype, {
           return (this as ScriptEventCommandMessageAfterEvent).sourceEntity;
         case ScriptEventSource.NPCDialogue:
           return (this as ScriptEventCommandMessageAfterEvent).initiator;
+        default:
+          return undefined;
+      }
+    },
+    enumerable: true,
+  },
+});
+
+// CustomCommandOrigin
+defineProperties(CustomCommandOrigin.prototype, {
+  source: {
+    get: function (): Block | Entity | undefined {
+      // see extension.ts for getter logic
+      switch ((this as CustomCommandOrigin).sourceType) {
+        case CustomCommandSource.Block:
+          return (this as CustomCommandOrigin).sourceBlock;
+        case CustomCommandSource.Entity:
+          return (this as CustomCommandOrigin).sourceEntity;
+        case CustomCommandSource.NPCDialogue:
+          return (this as CustomCommandOrigin).initiator;
         default:
           return undefined;
       }

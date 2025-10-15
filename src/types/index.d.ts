@@ -275,7 +275,11 @@ declare module "@minecraft/server" {
   }
 
   interface ScriptEventCommandMessageAfterEvent {
-    /** The source block or entity that triggered this script event, or undefined. */
+    /** The source block or entity that triggered the script event, or undefined. */
+    readonly source: Block | Entity | undefined;
+  }
+  interface CustomCommandOrigin {
+    /** The source block or entity that triggered the custom command, or undefined. */
     readonly source: Block | Entity | undefined;
   }
 }

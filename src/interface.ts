@@ -18,6 +18,23 @@ export interface Scene {
   ease_type: string;
 }
 
+export interface SceneFrame {
+  time: number;
+  data_points: any;
+  interpolation?: string;
+}
+export interface SceneData {
+  sceneId: string;
+  animationId: string;
+  playerOption: any;
+  entityOption: any;
+  positions?: SceneFrame[];
+  rotations?: SceneFrame[];
+  commands: { time: number; data_points: string[] }[];
+  sounds: { time: number; data_points: string[] }[];
+  length: number;
+}
+
 export interface TimedCommand {
   timeTick: number;
   commands: string[];
