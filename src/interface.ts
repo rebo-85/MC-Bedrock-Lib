@@ -1,3 +1,5 @@
+import { Vector3 } from "classes";
+
 export interface CommandResult {
   successCount: number;
 }
@@ -20,14 +22,12 @@ export interface Scene {
 
 export interface SceneFrame {
   time: number;
-  data_points: any;
+  data_points: Vector3;
   interpolation?: string;
 }
 export interface SceneData {
   sceneId: string;
   animationId: string;
-  playerOption: any;
-  entityOption: any;
   positions?: SceneFrame[];
   rotations?: SceneFrame[];
   commands: { time: number; data_points: string[] }[];

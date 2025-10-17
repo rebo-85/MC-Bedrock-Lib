@@ -92,8 +92,8 @@ export class Vector3 extends Vector2 {
 
   rotate(angle: number) {
     const rad = (angle * Math.PI) / 180;
-    const c = Math.cos(rad),
-      s = Math.sin(rad);
+    const c = Math.cos(rad);
+    const s = Math.sin(rad);
     const rx = this.x * c - this.z * s;
     const rz = this.x * s + this.z * c;
     return new Vector3(rx, this.y, rz);

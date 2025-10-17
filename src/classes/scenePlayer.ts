@@ -15,7 +15,7 @@ import { CommandRegistry } from "./registry";
 import { Run } from "./utils";
 import { toCommandDecimal } from "utils";
 class ScenePlayer {
-  scenarioData: SceneData = {} as SceneData;
+  scenes: Map<string, SceneData> = new Map();
   activeScene: number | null = null;
 
   constructor(command: string = "ecs_mp:playscene") {
@@ -46,7 +46,7 @@ class ScenePlayer {
           if (actors.length == 1) {
             if (players.length > 0 && origin.source) {
               new Run(() => {
-                this._runScene(origin.source.dimension, actors[0], players);
+                this._runScene(origin.source.dimension, actors[0], players, sceneId);
               });
             } else {
               result.message = "No players matched selector";
@@ -57,7 +57,7 @@ class ScenePlayer {
             result.status = CustomCommandStatus.Failure;
           }
         } else {
-          result.message = "No actors found matched selector";
+          result.message = "No actors matched selector";
           result.status = CustomCommandStatus.Failure;
         }
         new Run(() => {});
@@ -100,11 +100,12 @@ class ScenePlayer {
     frameRot: Vector2,
     tickDelta: number
   ) {
-    const rel = framePos.offset(new Vector3(-actorEntity.location.x, -actorEntity.location.y, -actorEntity.location.z));
-    const rot = rel.rotate(actorEntity.getRotation().y);
+    const rel = framePos.offset(new Vector3(-actorEntity.x, -actorEntity.y, -actorEntity.z));
+    const rot = rel.rotate(actorEntity.ry);
     const finalPos = rot.offset(Vector3.extend(actorEntity.location));
-    const rx = frameRot.x;
-    const ry = this._normalizeRotation(frameRot.y + actorEntity.getRotation().y);
+    finalPos.z = -finalPos.z;
+    const rx = -frameRot.x;
+    const ry = -this._normalizeRotation(frameRot.y + actorEntity.ry);
     const cmd = `camera @s set minecraft:free ease ${tickDelta} linear pos ${toCommandDecimal(
       finalPos.x
     )} ${toCommandDecimal(finalPos.y)} ${toCommandDecimal(finalPos.z)} rot ${toCommandDecimal(rx)} ${toCommandDecimal(
@@ -125,13 +126,15 @@ class ScenePlayer {
     system.runTimeout(() => player.commandRun("camera @s clear"), 1);
   }
 
-  private _runScene(dimension: Dimension, actor: Entity, players: Player[]) {
+  private _runScene(dimension: Dimension, actor: Entity, players: Player[], sceneId: string) {
     if (this.activeScene) system.clearRun(this.activeScene);
     const playerGameModes = new Map<string, string>();
     const playerCheckpoints = new Map<string, { location: Vector3; rotation: Vector2 }>();
     const executedCommands = new Set<number>();
     const playedSounds = new Set<number>();
-    actor.playAnimation(this.scenarioData.animationId);
+    const sceneData = this.scenes.get(sceneId);
+    if (!sceneData) return;
+    actor.playAnimation(sceneData.animationId);
     players.forEach((player: Player) => {
       playerGameModes.set(player.id, player.gamemode);
       playerCheckpoints.set(player.id, {
@@ -157,16 +160,16 @@ class ScenePlayer {
       ticksPerSecond = 1 / elapsed;
       const tickDelta = 1 / ticksPerSecond;
       tick += tickDelta;
-      const framePos = this._calculateFramePosition(actor, tick);
-      const frameRot = this._calculateFrameRotation(actor, tick);
-      this.scenarioData.commands.forEach((cmd) => this._handleCommand(dimension, cmd, executedCommands, tick, 0.05));
-      const currentSound = this._handleSound(this.scenarioData, tick, playedSounds, 0.05);
+      const framePos = this._calculateFramePosition(actor, tick, sceneData);
+      const frameRot = this._calculateFrameRotation(actor, tick, sceneData);
+      sceneData.commands.forEach((cmd) => this._handleCommand(dimension, cmd, executedCommands, tick, 0.05));
+      const currentSound = this._handleSound(sceneData, tick, playedSounds, 0.05);
       players.forEach((player: Player) => {
         player.teleport(framePos, { rotation: new Vector2(frameRot.x, frameRot.y) });
         this._setPlayerCamera(player, actor, framePos, frameRot, tickDelta);
         if (currentSound) currentSound.data_points.forEach((snd: string) => player.playSound(snd));
       });
-      if (tick >= this.scenarioData.length) {
+      if (tick >= sceneData.length) {
         players.forEach((player: Player) =>
           this._resetPlayer(player, playerGameModes.get(player.id)!, playerCheckpoints.get(player.id)!)
         );
@@ -190,7 +193,7 @@ class ScenePlayer {
   }
 
   private _normalizeRotation(rot: number) {
-    return ((rot + 180) % 360) - 180;
+    return (rot + 180) % 360;
   }
 
   private _easeTime(t: number, mode = "linear") {
@@ -200,8 +203,8 @@ class ScenePlayer {
     return t;
   }
 
-  private _calculateFramePosition(actorEntity: Entity, tick: number) {
-    const keyframes = this.scenarioData.positions || [];
+  private _calculateFramePosition(actorEntity: Entity, tick: number, sceneData: SceneData) {
+    const keyframes = sceneData.positions || [];
     if (!keyframes.length) return Vector3.extend(actorEntity.location);
     const [startFrame, endFrame] = this._getKeyframes(keyframes, tick);
     const posStart = Vector3.extend(startFrame.data_points).offset(Vector3.extend(actorEntity.location));
@@ -212,8 +215,8 @@ class ScenePlayer {
     return Vector3.lerp(posStart, posEnd, eased);
   }
 
-  private _calculateFrameRotation(actorEntity: Entity, tick: number) {
-    const keyframes = this.scenarioData.rotations || [];
+  private _calculateFrameRotation(actorEntity: Entity, tick: number, sceneData: SceneData) {
+    const keyframes = sceneData.rotations || [];
     if (!keyframes.length) return Vector2.extend(actorEntity.rotation);
     const [startFrame, endFrame] = this._getKeyframes(keyframes, tick);
     if (!startFrame || !endFrame) return Vector2.extend(actorEntity.rotation);
