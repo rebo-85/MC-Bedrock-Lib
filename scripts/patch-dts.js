@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 
 const src = path.join(__dirname, "../src/types/index.d.ts");
-const out = path.join(__dirname, "../dist/mc_bedrock_lib.d.ts");
+const out = path.join(__dirname, "../dist/mc-bedrock-lib.d.ts");
 
 function extractAllBlocks(src, pattern) {
   const blocks = [];

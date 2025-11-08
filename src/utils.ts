@@ -1,3 +1,15 @@
+import { world } from "@minecraft/server";
+
+export function tillWorldLoad(): Promise<void> {
+  return new Promise((resolve) => {
+    const callback = () => {
+      world.afterEvents.worldLoad.unsubscribe(callback);
+      resolve();
+    };
+    world.afterEvents.worldLoad.subscribe(callback);
+  });
+}
+
 export function defineProperties(target: object, properties: Record<string, PropertyDescriptor>) {
   for (const [prop, descriptor] of Object.entries(properties)) {
     Object.defineProperty(target, prop, { ...descriptor, configurable: true });
