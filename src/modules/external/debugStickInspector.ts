@@ -1,5 +1,5 @@
 import { world, EntityRaycastHit, BlockRaycastHit, EquipmentSlot, RawMessage } from "@minecraft/server";
-import { Manager } from "./utils";
+import { Manager } from "../utils";
 
 /**
  * DebugStickInspector

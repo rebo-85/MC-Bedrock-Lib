@@ -49,9 +49,9 @@ import {
   PlayerOnUnequipAfterEventSignal,
   EntityOnGroundAfterEventSignal,
   EntitySneakAfterEventSignal,
-} from "./classes/index";
+} from "./modules/index";
 
-import { Vector3, Vector2 } from "./classes/index";
+import { Vector3, Vector2 } from "./modules/index";
 
 import { arraysEqual, defineProperties } from "./utils";
 import { playersUsingItem, weatherTracker } from "./events";

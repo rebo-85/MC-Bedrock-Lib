@@ -1,12 +1,12 @@
 {
   "name": "mc-bedrock-lib",
   "version": "0.2.4",
-  "main": "dist/mc_bedrock_lib.js",
-  "types": "dist/mc_bedrock_lib.d.ts",
+  "main": "dist/mc-bedrock-lib.js",
+  "types": "dist/mc-bedrock-lib.d.ts",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --outfile=dist/mc_bedrock_lib.js --format=esm --external:@minecraft/server --external:@minecraft/server-ui && npx dts-bundle-generator -o dist/mc_bedrock_lib.d.ts ./src/index.ts --external-imports @minecraft/server --external-imports @minecraft/server-ui && node scripts/patch-dts.js",
+    "build": "esbuild src/index.ts --bundle --outfile=dist/mc-bedrock-lib.js --format=esm --external:@minecraft/server --external:@minecraft/server-ui && npx dts-bundle-generator -o dist/mc-bedrock-lib.d.ts ./src/index.ts --external-imports @minecraft/server --external-imports @minecraft/server-ui && node scripts/patch-dts.js",
     "dev": "nodemon --watch src --ext js,ts --exec \"npm run build\"",
-    "types": "tsc --emitDeclarationOnly --declaration --outFile dist/mc_bedrock_lib.d.ts",
+    "types": "tsc --emitDeclarationOnly --declaration --outFile dist/mc-bedrock-lib.d.ts",
     "release": "standard-version"
   },
   "description": "Utility library for Minecraft Bedrock API",

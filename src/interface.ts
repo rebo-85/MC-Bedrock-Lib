@@ -1,4 +1,4 @@
-import { Vector3 } from "classes";
+import { Vector3 } from "modules";
 
 export interface CommandResult {
   successCount: number;

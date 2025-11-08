@@ -1,4 +1,4 @@
-export * from "./classes/index";
+export * from "./modules/index";
 export * from "./interface";
 export * from "./server_extension";
 export * from "./js_extension";

@@ -8,7 +8,7 @@ import {
   SystemAfterEvents,
   SystemBeforeEvents,
 } from "@minecraft/server";
-import { BlockRegistry, CommandRegistry, DebugStickInspector, ItemRegistry } from "classes";
+import { BlockRegistry, CommandRegistry, ItemRegistry } from "modules";
 
 /**
  * Project-wide namespace string, used for identifiers.

@@ -1,4 +1,4 @@
-import { RunInterval } from "./utils";
+import { RunInterval } from "../utils";
 
 /**
  * Countdown timer utility for ticking events.

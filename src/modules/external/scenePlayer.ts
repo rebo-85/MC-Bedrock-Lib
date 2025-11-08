@@ -9,11 +9,11 @@ import {
   CustomCommandOrigin,
   CustomCommandStatus,
 } from "@minecraft/server";
-import { SceneData, SceneFrame } from "../interface";
-import { Vector2, Vector3 } from "./general";
-import { CommandRegistry } from "./registry";
-import { Run } from "./utils";
-import { toCommandDecimal } from "utils";
+import { SceneData, SceneFrame } from "../../interface";
+import { Vector2, Vector3 } from "../general";
+import { CommandRegistry } from "../registry";
+import { Run } from "../utils";
+import { toCommandDecimal } from "../../utils";
 class ScenePlayer {
   scenes: Map<string, SceneData> = new Map();
   activeScene: number | null = null;

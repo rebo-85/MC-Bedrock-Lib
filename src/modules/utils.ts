@@ -33,6 +33,8 @@ export class Manager {
   private _process: number;
   private _isDisposed: boolean;
   constructor() {
+    this._init();
+
     const process = () => {
       this._main();
       if (!this._isDisposed) this._process = system.run(process);
@@ -40,6 +42,7 @@ export class Manager {
     this._process = system.run(process);
   }
 
+  protected _init(): void {}
   protected _main(): void {}
   dispose() {
     this._isDisposed = true;

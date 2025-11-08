@@ -1,4 +1,4 @@
-import { Vector3, Vector2 } from "./classes/index";
+import { Vector3, Vector2 } from "./modules/index";
 import { defineProperties } from "./utils";
 
 Math.randomInt = function (min: number, max: number): number {
