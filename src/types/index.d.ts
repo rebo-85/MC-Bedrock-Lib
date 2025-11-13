@@ -8,9 +8,10 @@ import {
   PlayerOnLandAfterEventSignal,
   PlayerOnEquipAfterEventSignal,
   PlayerOnUnequipAfterEventSignal,
-  Vector3,
-  Vector2,
-} from "./classes";
+  PlayerXpOrbCollectAfterEventSignal,
+} from "../modules/events";
+
+import { Vector2, Vector3 } from "../modules/general";
 
 /**
  * Extends the String prototype with utility methods for string manipulation and parsing.
@@ -68,6 +69,8 @@ declare module "@minecraft/server" {
     readonly playerOnEquip: PlayerOnEquipAfterEventSignal;
     /** Signal triggered when a player unequips an item. */
     readonly playerOnUnequip: PlayerOnUnequipAfterEventSignal;
+    /** Signal triggered when a player collects an xp orb. */
+    readonly playerXpOrbCollect: PlayerXpOrbCollectAfterEventSignal;
   }
   interface Player {
     /** Indicates whether the player can die (is mortal). */
@@ -94,6 +97,8 @@ declare module "@minecraft/server" {
     ipMovement: boolean;
     /** Whether player camera input is enabled. */
     ipCamera: boolean;
+    /** The total experience points of the player. */
+    xp: number;
   }
   interface Entity {
     /** Runs one or more commands as this entity. */
@@ -229,15 +234,19 @@ declare module "@minecraft/server" {
     /** Gets a specific enchantment from this item stack, or undefined. */
     getEnchantment(enchantmentType: EnchantmentType): Enchantment | undefined;
     /** Checks if this item stack has a specific enchantment. */
-    hasEnchantment(enchantmentType: EnchantmentType): boolean;
+    hasEnchantment(enchantmentType: EnchantmentType | string): boolean;
     /** Removes a specific enchantment from this item stack. */
     removeEnchantment(enchantmentType: EnchantmentType): void;
     /** Removes all enchantments from this item stack. */
     removeAllEnchantments(): void;
     /** The durability component for this item stack. */
     readonly durabilityComponent: ItemDurabilityComponent;
+    /** The current damage value of this item stack. */
+    damage: number;
     /** The current durability value of this item stack. */
     durability: number;
+    /** The maximum durability value of this item stack. */
+    maxDurability: number;
   }
   interface Container {
     /** Iterates over each slot in the container, calling the callback with the slot object and slot ID. */

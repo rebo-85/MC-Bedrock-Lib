@@ -30,6 +30,8 @@ export class PlayerManager extends Manager {
 export class EntityManager extends Manager {
   entities: Entity[] = [];
   private _options: EntityQueryOptions;
+  private _onEntityAddCallbacks: ((entity: Entity) => void)[] = [];
+  private _onEntityRemoveCallbacks: ((entityId: string) => void)[] = [];
 
   constructor(options: EntityQueryOptions = {}) {
     super();
@@ -55,15 +57,30 @@ export class EntityManager extends Manager {
 
   protected _init() {
     world.afterEvents.entitySpawn.subscribe((e) => {
-      if (this._isMatch(e.entity) && !this.entities.some((ent) => ent.id === e.entity.id)) this.entities.push(e.entity);
+      if (this._isMatch(e.entity) && !this.entities.some((ent) => ent.id === e.entity.id)) {
+        this.entities.push(e.entity);
+        this._onEntityAddCallbacks.forEach((cb) => cb(e.entity));
+      }
     });
 
     world.afterEvents.entityLoad.subscribe((e) => {
-      if (this._isMatch(e.entity) && !this.entities.some((ent) => ent.id === e.entity.id)) this.entities.push(e.entity);
+      if (this._isMatch(e.entity) && !this.entities.some((ent) => ent.id === e.entity.id)) {
+        this.entities.push(e.entity);
+        this._onEntityAddCallbacks.forEach((cb) => cb(e.entity));
+      }
     });
 
     world.afterEvents.entityRemove.subscribe((e) => {
       this.entities = this.entities.filter((ent) => ent.id !== e.removedEntityId);
+      this._onEntityRemoveCallbacks.forEach((cb) => cb(e.removedEntityId));
     });
+  }
+
+  onEntityAdd(cb: (entity: Entity) => void) {
+    this._onEntityAddCallbacks.push(cb);
+  }
+
+  onEntityRemove(cb: (entityId: string) => void) {
+    this._onEntityRemoveCallbacks.push(cb);
   }
 }

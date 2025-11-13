@@ -49,6 +49,7 @@ import {
   PlayerOnUnequipAfterEventSignal,
   EntityOnGroundAfterEventSignal,
   EntitySneakAfterEventSignal,
+  PlayerXpOrbCollectAfterEventSignal,
 } from "./modules/index";
 
 import { Vector3, Vector2 } from "./modules/index";
@@ -101,6 +102,11 @@ defineProperties(WorldAfterEvents.prototype, {
   playerStopJumping: {
     get: function (): PlayerStopJumpingAfterEventSignal {
       return new PlayerStopJumpingAfterEventSignal();
+    },
+  },
+  playerXpOrbCollect: {
+    get: function (): PlayerXpOrbCollectAfterEventSignal {
+      return new PlayerXpOrbCollectAfterEventSignal();
     },
   },
 });
@@ -175,10 +181,30 @@ defineProperties(ItemStack.prototype, {
       return false;
     },
   },
+  damage: {
+    get: function (): number {
+      return (this as ItemStack).durabilityComponent?.damage ?? 0;
+    },
+    set: function (dmg: number) {
+      const dc = (this as ItemStack).durabilityComponent;
+      if (!dc) return;
+      if (dmg < 0) {
+        dmg = 0;
+      } else if (dmg > (dc.maxDurability ?? 0)) {
+        dmg = dc.maxDurability ?? 0;
+      }
+      dc.damage = dmg;
+    },
+    enumerable: true,
+  },
+
   durability: {
     get: function (): number {
-      return (this as ItemStack).durabilityComponent?.maxDurability ?? 0;
+      if (!this.durabilityComponent) return 0;
+
+      return (this as ItemStack).maxDurability - (this as ItemStack).damage;
     },
+
     set: function (dur: number) {
       const dc = (this as ItemStack).durabilityComponent;
       if (!dc) return;
@@ -216,7 +242,7 @@ defineProperties(ItemStack.prototype, {
     },
   },
   hasEnchantment: {
-    value: function (enchantmentType: EnchantmentType): boolean {
+    value: function (enchantmentType: EnchantmentType | string): boolean {
       return !!(this as ItemStack).enchantableComponent?.hasEnchantment(enchantmentType);
     },
   },
@@ -224,6 +250,12 @@ defineProperties(ItemStack.prototype, {
     get: function (): boolean {
       return !!BlockTypes.get((this as ItemStack).typeId);
     },
+  },
+  maxDurability: {
+    get: function (): number {
+      return (this as ItemStack).durabilityComponent?.maxDurability ?? 0;
+    },
+    enumerable: true,
   },
   removeAllEnchantments: {
     value: function (): void {
@@ -417,6 +449,60 @@ defineProperties(Player.prototype, {
   stopSound: {
     value: function (id: string): void {
       (this as Player).runCommand(`stopsound @s ${id}`);
+    },
+  },
+  xp: {
+    get: function (): number {
+      return (this as Player).getTotalXp();
+    },
+    set: function (value: number) {
+      const player = this as Player;
+
+      function calculateLevelFromXp(totalXp: number): { level: number; xpAtLevel: number } {
+        if (totalXp < 0) totalXp = 0;
+
+        let xp = 0;
+        let level = 0;
+
+        while (level < 16) {
+          const xpNeeded = 7 + level * 2;
+          if (xp + xpNeeded > totalXp) {
+            return { level, xpAtLevel: totalXp - xp };
+          }
+          xp += xpNeeded;
+          level++;
+        }
+
+        while (level < 31) {
+          const xpNeeded = 37 + (level - 15) * 5;
+          if (xp + xpNeeded > totalXp) {
+            return { level, xpAtLevel: totalXp - xp };
+          }
+          xp += xpNeeded;
+          level++;
+        }
+
+        while (true) {
+          const xpNeeded = 112 + (level - 30) * 9;
+          if (xp + xpNeeded > totalXp) {
+            return { level, xpAtLevel: totalXp - xp };
+          }
+          xp += xpNeeded;
+          level++;
+        }
+      }
+
+      const target = calculateLevelFromXp(value);
+
+      player.resetLevel();
+
+      if (target.level > 0) {
+        player.addLevels(target.level);
+      }
+
+      if (target.xpAtLevel > 0) {
+        player.addExperience(target.xpAtLevel);
+      }
     },
   },
 });

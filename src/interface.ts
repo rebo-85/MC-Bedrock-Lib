@@ -47,3 +47,9 @@ export interface CutsceneOptions {
   is_spectator?: boolean;
   is_invisible?: boolean;
 }
+
+export interface XpData {
+  level: number;
+  xpEarnedAtCurrentLevel: number;
+  totalXpNeededForNextLevel: number;
+}
