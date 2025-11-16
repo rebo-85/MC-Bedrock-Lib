@@ -161,18 +161,18 @@ declare module "@minecraft/server" {
     getEquipment(slot: EquipmentSlot): ItemStack | undefined;
     /** Sets the item in the specified equipment slot. Returns true if successful. */
     setEquipment(slot: EquipmentSlot, item: ItemStack): boolean | undefined;
-    /** Sets the mainhand item for the entity. */
-    setMainhand(item: ItemStack | undefined): void;
-    /** Sets the offhand item for the entity. */
-    setOffhand(item: ItemStack | undefined): void;
-    /** Sets the head slot item for the entity. */
-    setHead(item: ItemStack | undefined): void;
-    /** Sets the chest slot item for the entity. */
-    setChest(item: ItemStack | undefined): void;
-    /** Sets the legs slot item for the entity. */
-    setLegs(item: ItemStack | undefined): void;
-    /** Sets the feet slot item for the entity. */
-    setFeet(item: ItemStack | undefined): void;
+    /** The item in the main hand slot. */
+    mainHandItem: ItemStack | undefined;
+    /** The item in the offhand slot. */
+    offhandItem: ItemStack | undefined;
+    /** The item in the head slot. */
+    headItem: ItemStack | undefined;
+    /** The item in the chest slot. */
+    chestItem: ItemStack | undefined;
+    /** The item in the legs slot. */
+    legsItem: ItemStack | undefined;
+    /** The item in the feet slot. */
+    feetItem: ItemStack | undefined;
     /** The entity's inventory container, or undefined if not present. */
     readonly inventory: Container | undefined;
     /** Adds an item to the entity's inventory. */

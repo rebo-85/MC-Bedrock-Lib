@@ -1,4 +1,4 @@
-import { world } from "@minecraft/server";
+import { system, World, world } from "@minecraft/server";
 
 export function tillWorldLoad(): Promise<void> {
   return new Promise((resolve) => {
@@ -8,6 +8,144 @@ export function tillWorldLoad(): Promise<void> {
     };
     world.afterEvents.worldLoad.subscribe(callback);
   });
+}
+
+export function createDimGetter(dimId: string) {
+  return function (this: World): any {
+    const w = this;
+    const dimName = dimId.split(":")[1].replace("the_", "");
+    const err = new Error(`[World::${dimName}] requires await.`);
+
+    try {
+      return w.getDimension(dimId);
+    } catch {
+      const handler = {
+        get(target: any, prop: string | symbol) {
+          if (prop === "then") {
+            return (onRes: any, onRej: any) => {
+              const p = new Promise((res) => {
+                const chk = () => {
+                  try {
+                    const dim = w.getDimension(dimId);
+                    res(dim);
+                  } catch {
+                    system.run(chk);
+                  }
+                };
+                chk();
+              });
+              return p.then(onRes, onRej);
+            };
+          }
+          if (prop === "toJSON" || prop === "toString" || prop === "valueOf") {
+            return () => {
+              throw err;
+            };
+          }
+          throw err;
+        },
+      };
+      return new Proxy({}, handler);
+    }
+  };
+}
+
+export function createPlayersGetter() {
+  return function (this: World): any {
+    const w = this;
+    const err = new Error("[World::players] requires await.");
+
+    try {
+      return w.getAllPlayers();
+    } catch {
+      const handler = {
+        get(target: any, prop: string | symbol) {
+          if (prop === "then") {
+            return (onRes: any, onRej: any) => {
+              const p = new Promise((res) => {
+                const chk = () => {
+                  try {
+                    const plrs = w.getAllPlayers();
+                    res(plrs);
+                  } catch {
+                    system.run(chk);
+                  }
+                };
+                chk();
+              });
+              return p.then(onRes, onRej);
+            };
+          }
+          if (prop === "toJSON" || prop === "toString" || prop === "valueOf") {
+            return () => {
+              throw err;
+            };
+          }
+          const idx = Number(prop);
+          if (!isNaN(idx)) {
+            return {
+              then(onRes: any, onRej: any) {
+                const p = new Promise((res) => {
+                  const chk = () => {
+                    try {
+                      const plrs = w.getAllPlayers();
+                      res(plrs[idx]);
+                    } catch {
+                      system.run(chk);
+                    }
+                  };
+                  chk();
+                });
+                return p.then(onRes, onRej);
+              },
+            };
+          }
+          throw err;
+        },
+      };
+      return new Proxy({}, handler);
+    }
+  };
+}
+
+export function createArrayProxy<T>(getArr: () => T[], getRdy: () => boolean): any {
+  // If ready, return array directly
+  if (getRdy()) return getArr();
+
+  // Otherwise return Proxy that supports await
+  const err = new Error("Array access requires await.");
+  const handler = {
+    get(target: any, prop: string | symbol) {
+      if (prop === "then") {
+        return (onRes: any, onRej: any) => {
+          const p = new Promise<T[]>((res) => {
+            const chk = () => (getRdy() ? res(getArr()) : system.run(chk));
+            system.run(chk);
+          });
+          return p.then(onRes, onRej);
+        };
+      }
+      if (prop === "toJSON" || prop === "toString" || prop === "valueOf") {
+        return () => {
+          throw err;
+        };
+      }
+      const idx = Number(prop);
+      if (!isNaN(idx)) {
+        return {
+          then(onRes: any, onRej: any) {
+            const p = new Promise<T>((res) => {
+              const chk = () => (getRdy() ? res(getArr()[idx]) : system.run(chk));
+              system.run(chk);
+            });
+            return p.then(onRes, onRej);
+          },
+        };
+      }
+      throw err;
+    },
+  };
+  return new Proxy({}, handler);
 }
 
 export function defineProperties(target: object, properties: Record<string, PropertyDescriptor>) {

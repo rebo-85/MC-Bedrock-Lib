@@ -120,20 +120,14 @@ export class PlayerEventSignal extends EventSignal {
     super();
   }
 
-  protected _init(): void {
-    this._initPlayers();
+  protected async _init(): Promise<void> {
+    await this._initPlayers();
   }
 
-  private _initPlayers(): void {
-    const callback = () => {
-      const pm = new PlayerManager();
-      pm.players = world.getAllPlayers();
-      this.players = pm.players;
-      this._isInitialized = true;
-      world.afterEvents.worldLoad.unsubscribe(callback);
-    };
-
-    world.afterEvents.worldLoad.subscribe(callback);
+  private async _initPlayers(): Promise<void> {
+    const pm = new PlayerManager();
+    this.players = await pm.players;
+    this._isInitialized = true;
   }
 }
 
@@ -320,8 +314,8 @@ export class PlayerXpOrbCollectAfterEventSignal extends PlayerEventSignal {
     super();
   }
 
-  protected _init(): void {
-    super._init();
+  protected async _init(): Promise<void> {
+    await super._init();
 
     world.afterEvents.entitySpawn.subscribe(({ entity }) => {
       if (entity.typeId === "minecraft:xp_orb") {
@@ -403,19 +397,14 @@ export class EntityEventSignal extends EventSignal {
     super();
   }
 
-  protected _init(): void {
-    this._initEntities();
+  protected async _init(): Promise<void> {
+    await this._initEntities();
   }
 
-  private _initEntities(): void {
-    const callback = () => {
-      const pm = new EntityManager();
-      pm.entities = world.getEntities();
-      this.entities = pm.entities;
-      this._isInitialized = true;
-      world.afterEvents.worldLoad.unsubscribe(callback);
-    };
-    world.afterEvents.worldLoad.subscribe(callback);
+  private async _initEntities(): Promise<void> {
+    const em = new EntityManager();
+    this.entities = await em.entities;
+    this._isInitialized = true;
   }
 }
 

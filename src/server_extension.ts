@@ -54,7 +54,7 @@ import {
 
 import { Vector3, Vector2 } from "./modules/index";
 
-import { arraysEqual, defineProperties } from "./utils";
+import { arraysEqual, defineProperties, createDimGetter, createPlayersGetter } from "./utils";
 import { playersUsingItem, weatherTracker } from "./events";
 
 // WorldAfterEvents
@@ -113,12 +113,6 @@ defineProperties(WorldAfterEvents.prototype, {
 
 // World
 defineProperties(World.prototype, {
-  end: {
-    get: function (): Dimension {
-      return (this as World).getDimension("minecraft:the_end");
-    },
-    enumerable: true,
-  },
   getEntities: {
     value: function (selector?: any): Entity[] {
       const entities = new Set<Entity>();
@@ -130,22 +124,20 @@ defineProperties(World.prototype, {
       return Array.from(entities);
     },
   },
+  end: {
+    get: createDimGetter("minecraft:the_end"),
+    enumerable: true,
+  },
   nether: {
-    get: function (): Dimension {
-      return (this as World).getDimension("minecraft:nether");
-    },
+    get: createDimGetter("minecraft:nether"),
     enumerable: true,
   },
   overworld: {
-    get: function (): Dimension {
-      return (this as World).getDimension("minecraft:overworld");
-    },
+    get: createDimGetter("minecraft:overworld"),
     enumerable: true,
   },
   players: {
-    get: function (): Player[] {
-      return (this as World).getAllPlayers();
-    },
+    get: createPlayersGetter(),
     enumerable: true,
   },
 });
@@ -745,33 +737,51 @@ defineProperties(Entity.prototype, {
       return (this as Entity).equippableComponent?.setEquipment(slot, item);
     },
   },
-  setMainhand: {
-    value: function (item: ItemStack | undefined) {
+  mainHandItem: {
+    get: function (): ItemStack | undefined {
+      return this.getEquipment?.(EquipmentSlot.Mainhand);
+    },
+    set: function (item: ItemStack | undefined) {
       this.setEquipment?.(EquipmentSlot.Mainhand, item);
     },
   },
-  setOffhand: {
-    value: function (item: ItemStack | undefined) {
+  offhandItem: {
+    get: function (): ItemStack | undefined {
+      return this.getEquipment?.(EquipmentSlot.Offhand);
+    },
+    set: function (item: ItemStack | undefined) {
       this.setEquipment?.(EquipmentSlot.Offhand, item);
     },
   },
-  setHead: {
-    value: function (item: ItemStack | undefined) {
+  headItem: {
+    get: function (): ItemStack | undefined {
+      return this.getEquipment?.(EquipmentSlot.Head);
+    },
+    set: function (item: ItemStack | undefined) {
       this.setEquipment?.(EquipmentSlot.Head, item);
     },
   },
-  setChest: {
-    value: function (item: ItemStack | undefined) {
+  chestItem: {
+    get: function (): ItemStack | undefined {
+      return this.getEquipment?.(EquipmentSlot.Chest);
+    },
+    set: function (item: ItemStack | undefined) {
       this.setEquipment?.(EquipmentSlot.Chest, item);
     },
   },
-  setLegs: {
-    value: function (item: ItemStack | undefined) {
+  legsItem: {
+    get: function (): ItemStack | undefined {
+      return this.getEquipment?.(EquipmentSlot.Legs);
+    },
+    set: function (item: ItemStack | undefined) {
       this.setEquipment?.(EquipmentSlot.Legs, item);
     },
   },
-  setFeet: {
-    value: function (item: ItemStack | undefined) {
+  feetItem: {
+    get: function (): ItemStack | undefined {
+      return this.getEquipment?.(EquipmentSlot.Feet);
+    },
+    set: function (item: ItemStack | undefined) {
       this.setEquipment?.(EquipmentSlot.Feet, item);
     },
   },

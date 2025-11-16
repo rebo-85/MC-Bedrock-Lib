@@ -4,14 +4,9 @@ import { PlayerManager, Manager, world } from "mc-bedrock-lib";
 export class PassiveMending extends Manager {
   players: Player[] = [];
 
-  _init(): void {
-    const callback = (): void => {
-      const playerManager = new PlayerManager();
-      this.players = playerManager.players;
-
-      world.afterEvents.worldLoad.unsubscribe(callback);
-    };
-    world.afterEvents.worldLoad.subscribe(callback);
+  async _init(): Promise<void> {
+    const pm = new PlayerManager();
+    this.players = await pm.players;
 
     world.afterEvents.playerXpOrbCollect.subscribe(({ player, xpValue }) => {
       const inv = player.inventory;
