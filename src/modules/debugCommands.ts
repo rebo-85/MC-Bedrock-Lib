@@ -109,8 +109,6 @@ export class DebugCommands {
         }
 
         const oldDmg = item.damage;
-        const itemName = item.nameTag || item.typeId;
-
         new Run(() => {
           plr.damageItem(EquipmentSlot.Mainhand, value, true);
 
