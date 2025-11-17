@@ -1,9 +1,17 @@
+import { Player, WeatherType } from "@minecraft/server";
 import { Vector3 } from "modules";
 
+// Command & Execution
 export interface CommandResult {
   successCount: number;
 }
 
+export interface TimedCommand {
+  timeTick: number;
+  commands: string[];
+}
+
+// Scene & Animation
 export interface Fade {
   fadeIn: number;
   fadeHold: number;
@@ -11,10 +19,10 @@ export interface Fade {
 }
 
 export interface Scene {
-  posStart: any;
-  posEnd: any;
-  rotStart: any;
-  rotEnd: any;
+  posStart: Vector3;
+  posEnd: Vector3;
+  rotStart: Vector3;
+  rotEnd: Vector3;
   duration: number;
   fade: Fade;
   ease_type: string;
@@ -25,6 +33,7 @@ export interface SceneFrame {
   data_points: Vector3;
   interpolation?: string;
 }
+
 export interface SceneData {
   sceneId: string;
   animationId: string;
@@ -35,19 +44,21 @@ export interface SceneData {
   length: number;
 }
 
-export interface TimedCommand {
-  timeTick: number;
-  commands: string[];
-}
-
 export interface CutsceneOptions {
-  target: any;
+  target: Player;
   scenes: Scene[];
   timedCommands?: TimedCommand[];
   is_spectator?: boolean;
   is_invisible?: boolean;
 }
 
+// World & Environment
+export interface WeatherOptions {
+  type: WeatherType;
+  duration: number;
+}
+
+// Player Data
 export interface XpData {
   level: number;
   xpEarnedAtCurrentLevel: number;

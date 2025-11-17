@@ -1,62 +1,75 @@
-import { world, EntityRaycastHit, BlockRaycastHit, EquipmentSlot, RawMessage } from "@minecraft/server";
+import { BlockRaycastHit, EntityRaycastHit, EquipmentSlot, Player, RawMessage, world } from "@minecraft/server";
 import { Manager } from "mc-bedrock-lib";
 
 /**
  * DebugStickInspector
- * Handles debug stick inspection for blocks/entities in-game.
  * Shows block/entity info in action bar when holding debug stick.
  */
 export class DebugStickInspector extends Manager {
-  constructor() {
-    super();
+  private static readonly DEBUG_STICK_ID = "minecraft:debug_stick";
+  private static readonly MAX_DISTANCE = 7;
+
+  protected _main(): void {
+    for (const player of world.getAllPlayers()) {
+      if (!this._hasDebugStick(player)) continue;
+
+      const target = this._getTarget(player);
+      const text = this._getActionBarText(target);
+      player.setActionBar(text);
+    }
   }
 
-  /**
-   * Main tick logic for debug stick inspection.
-   * Iterates players, checks for debug stick, inspects target, updates action bar.
-   */
-  protected _main() {
-    for (const player of world.getAllPlayers()) {
-      const mainhand = player.getEquipment(EquipmentSlot.Mainhand);
-      if (!mainhand || mainhand.typeId !== "minecraft:debug_stick") continue;
+  private _hasDebugStick(player: Player): boolean {
+    const mainhand = player.getEquipment(EquipmentSlot.Mainhand);
+    return mainhand?.typeId === DebugStickInspector.DEBUG_STICK_ID;
+  }
 
-      let target: EntityRaycastHit | BlockRaycastHit | undefined = player.getEntitiesFromViewDirection({
-        includeLiquidBlocks: true,
-        includePassableBlocks: true,
-      })[0];
-      if (!target) {
-        target = player.getBlockFromViewDirection({
-          includeLiquidBlocks: true,
-          includePassableBlocks: true,
-          maxDistance: 7,
-        });
-      }
+  private _getTarget(player: Player): EntityRaycastHit | BlockRaycastHit | undefined {
+    const entityHit = player.getEntitiesFromViewDirection({
+      includeLiquidBlocks: true,
+      includePassableBlocks: true,
+    })[0];
 
-      let actionBarText: string | RawMessage = "No selected Block/Entity";
-      if (target && "block" in target && target.block) {
-        const block = target.block;
-        actionBarText = {
-          rawtext: [
-            { text: `§bBlock§r: §f${block.typeId}\n§r` },
-            { text: `§bFace§r: §f${target.face}\n§r` },
-            { text: `§bData§r: §f${JSON.stringify(block.permutation.getAllStates(), null, 2)}§r` },
-          ],
-        };
-      } else if (target && "entity" in target && target.entity) {
-        const entity = target.entity;
-        const entityData = {
-          dynamicProperties: entity.getDynamicPropertyIds(),
-        };
-        actionBarText = {
-          rawtext: [
-            { text: `§bEntity§r: §f${entity.typeId}\n§r` },
-            { text: `§bHealth§r: §f${entity.health}/${entity.maxHealth}\n§r` },
-            { text: `§bFamilies§r: §f[${entity.typeFamilies}]\n§r` },
-            { text: `§bData§r: §f${JSON.stringify(entityData, null, 2)}§r` },
-          ],
-        };
-      }
-      player.setActionBar(actionBarText);
-    }
+    if (entityHit) return entityHit;
+
+    return player.getBlockFromViewDirection({
+      includeLiquidBlocks: true,
+      includePassableBlocks: true,
+      maxDistance: DebugStickInspector.MAX_DISTANCE,
+    });
+  }
+
+  private _getActionBarText(target: EntityRaycastHit | BlockRaycastHit | undefined): string | RawMessage {
+    if (!target) return "No selected Block/Entity";
+
+    if ("block" in target && target.block) return this._getBlockInfo(target);
+    if ("entity" in target && target.entity) return this._getEntityInfo(target);
+
+    return "No selected Block/Entity";
+  }
+
+  private _getBlockInfo(target: BlockRaycastHit): RawMessage {
+    const block = target.block;
+    return {
+      rawtext: [
+        { text: `§bBlock§r: §f${block.typeId}\n§r` },
+        { text: `§bFace§r: §f${target.face}\n§r` },
+        { text: `§bData§r: §f${JSON.stringify(block.permutation.getAllStates(), null, 2)}§r` },
+      ],
+    };
+  }
+
+  private _getEntityInfo(target: EntityRaycastHit): RawMessage {
+    const entity = target.entity;
+    const data = { dynamicProperties: entity.getDynamicPropertyIds() };
+
+    return {
+      rawtext: [
+        { text: `§bEntity§r: §f${entity.typeId}\n§r` },
+        { text: `§bHealth§r: §f${entity.health}/${entity.maxHealth}\n§r` },
+        { text: `§bFamilies§r: §f[${entity.typeFamilies}]\n§r` },
+        { text: `§bData§r: §f${JSON.stringify(data, null, 2)}§r` },
+      ],
+    };
   }
 }

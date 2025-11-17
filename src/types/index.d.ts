@@ -82,7 +82,7 @@ declare module "@minecraft/server" {
     /** Returns the player's equipped items and inventory as maps. */
     getItems(typeId?: string): { equipments: Map<string, ItemStack>; inventory: Map<number, ItemStack> };
     /** Damages the item equipped in the specified slot. Returns the updated ItemStack or undefined. */
-    damageItem(slot: EquipmentSlot, damage?: number): ItemStack | undefined;
+    damageItem(slot: EquipmentSlot, damage?: number, ignoreUnbreaking?: bool): ItemStack | undefined;
     /** Stops a sound for the player by its ID. */
     stopSound(id: string): void;
     /** The player's current game mode (e.g., survival, creative). */
@@ -263,6 +263,8 @@ declare module "@minecraft/server" {
     getState(state: string): any;
     /** Sets the value of a specific block state. */
     setState(state: string, value: any): void;
+    /** Returns an object containing all block states and their values. */
+    getAllStates(): any;
     /** The inventory component for this block, if present. */
     readonly inventoryComponent: any;
     /** The inventory container for this block, or undefined. */
@@ -273,8 +275,6 @@ declare module "@minecraft/server" {
   interface BlockPermutation {
     /** Sets the value of a specific permutation state and returns the updated permutation. */
     setState(state: string, value: any): BlockPermutation;
-    /** Gets the value of a specific permutation state. */
-    getState(state: string): any;
   }
   interface Dimension {
     /** The current weather in this dimension, or undefined if not set. */

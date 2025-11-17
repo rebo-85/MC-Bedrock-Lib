@@ -55,9 +55,13 @@ import {
 import { Vector3, Vector2 } from "./modules/index";
 
 import { arraysEqual, defineProperties, createDimGetter, createPlayersGetter } from "./utils";
-import { playersUsingItem, weatherTracker } from "./events";
+import { playersUsingItem, weatherData } from "./events";
+import { WeatherOptions } from "interface";
 
-// WorldAfterEvents
+// ============================================================================
+// WorldAfterEvents Extensions
+// ============================================================================
+
 defineProperties(WorldAfterEvents.prototype, {
   entitySneak: {
     get: function (): EntitySneakAfterEventSignal {
@@ -111,7 +115,10 @@ defineProperties(WorldAfterEvents.prototype, {
   },
 });
 
-// World
+// ============================================================================
+// World Extensions
+// ============================================================================
+
 defineProperties(World.prototype, {
   getEntities: {
     value: function (selector?: any): Entity[] {
@@ -142,14 +149,20 @@ defineProperties(World.prototype, {
   },
 });
 
-// ItemStack
+// ============================================================================
+// ItemStack Extensions
+// ============================================================================
+
 defineProperties(ItemStack.prototype, {
+  // Enchantment methods
   addEnchantment: {
     value: function (...enchantments: Enchantment[]): void {
       const enchantmentList = enchantments.flat();
       enchantmentList.forEach((ench: any) => (this as ItemStack).enchantableComponent?.addEnchantments(ench));
     },
   },
+
+  // Comparison methods
   compare: {
     value: function (itemStack: ItemStack | null | undefined): boolean {
       if (itemStack === null || itemStack === undefined) return false;
@@ -173,6 +186,8 @@ defineProperties(ItemStack.prototype, {
       return false;
     },
   },
+
+  // Durability properties
   damage: {
     get: function (): number {
       return (this as ItemStack).durabilityComponent?.damage ?? 0;
@@ -210,6 +225,8 @@ defineProperties(ItemStack.prototype, {
     },
     enumerable: true,
   },
+
+  // Component shortcuts
   durabilityComponent: {
     get: function (): ItemDurabilityComponent | undefined {
       return (this as ItemStack).getComponent(ItemComponentTypes.Durability);
@@ -228,6 +245,8 @@ defineProperties(ItemStack.prototype, {
     },
     enumerable: true,
   },
+
+  // Enchantment getters
   getEnchantment: {
     value: function (enchantmentType: EnchantmentType): Enchantment | undefined {
       return (this as ItemStack).enchantableComponent?.getEnchantment(enchantmentType);
@@ -238,6 +257,8 @@ defineProperties(ItemStack.prototype, {
       return !!(this as ItemStack).enchantableComponent?.hasEnchantment(enchantmentType);
     },
   },
+
+  // Utility properties
   isVanillaBlock: {
     get: function (): boolean {
       return !!BlockTypes.get((this as ItemStack).typeId);
@@ -249,6 +270,8 @@ defineProperties(ItemStack.prototype, {
     },
     enumerable: true,
   },
+
+  // Enchantment removal
   removeAllEnchantments: {
     value: function (): void {
       return (this as ItemStack).enchantableComponent?.removeAllEnchantments();
@@ -261,8 +284,12 @@ defineProperties(ItemStack.prototype, {
   },
 });
 
-// Block
+// ============================================================================
+// Block Extensions
+// ============================================================================
+
 defineProperties(Block.prototype, {
+  // Block query methods
   getAdjacentBlocks: {
     value: function (): Block[] {
       const ofs = [
@@ -313,11 +340,26 @@ defineProperties(Block.prototype, {
       return items;
     },
   },
+
+  // Block state methods
   getState: {
     value: function (state: string): any {
       return (this as Block).permutation.getState(state as any);
     },
   },
+  getAllStates: {
+    value: function (): any {
+      return (this as Block).permutation.getAllStates();
+    },
+  },
+  setState: {
+    value: function (state: string, value: any): void {
+      const perm = (this as Block).permutation.withState(state as any, value);
+      (this as Block).setPermutation(perm);
+    },
+  },
+
+  // Component shortcuts
   inventory: {
     get: function (): Container | undefined {
       return (this as Block).inventoryComponent?.container;
@@ -330,31 +372,35 @@ defineProperties(Block.prototype, {
     },
     enumerable: true,
   },
-  setState: {
-    value: function (state: string, value: any): void {
-      const perm = (this as Block).permutation.withState(state as any, value);
-      (this as Block).setPermutation(perm);
-    },
-  },
 });
 
-// Player
+// ============================================================================
+// Player Extensions
+// ============================================================================
+
 defineProperties(Player.prototype, {
+  // Inventory management
   clearItem: {
     value: function (typeId: string, maxCount: string = "", data: number = -1): void {
       (this as Player).runCommand(`clear @s ${typeId} ${data} ${maxCount}`);
     },
   },
   damageItem: {
-    value: function (slot: EquipmentSlot, damage: number = 1): ItemStack | undefined {
-      // unbreaking
+    value: function (slot: EquipmentSlot, damage: number = 1, ignoreUnbreaking = false): ItemStack | undefined {
       const eqSlot = (this as Player).equippableComponent?.getEquipmentSlot(slot);
       const item = eqSlot?.getItem();
       if (!item) return;
-      const unbreaking = item.getEnchantment({ id: "unbreakind" } as EnchantmentType);
-      const unbreakingLevel = unbreaking ? unbreaking.level : 0;
-      const unbreakingChance = 1 / (unbreakingLevel + 1);
-      if (Math.random() < unbreakingChance && (this as Player).gamemode !== GameMode.Creative) {
+
+      let shouldDamage = true;
+
+      if (!ignoreUnbreaking) {
+        const unbreaking = item.getEnchantment(new EnchantmentType("minecraft:unbreaking"));
+        const unbreakingLevel = unbreaking ? unbreaking.level : 0;
+        const unbreakingChance = 1 / (unbreakingLevel + 1);
+        shouldDamage = Math.random() < unbreakingChance;
+      }
+
+      if (shouldDamage) {
         item.durability -= damage;
         if (item.durability <= 0) {
           eqSlot?.setItem(undefined);
@@ -363,9 +409,12 @@ defineProperties(Player.prototype, {
           eqSlot?.setItem(item);
         }
       }
+
       return item;
     },
   },
+
+  // Gamemode property
   gamemode: {
     get: function (): GameMode {
       return (this as Player).getGameMode();
@@ -375,6 +424,8 @@ defineProperties(Player.prototype, {
     },
     enumerable: true,
   },
+
+  // Item query methods
   getItems: {
     value: function (typeId?: string): { equipments: Map<string, ItemStack>; inventory: Map<number, ItemStack> } {
       const eMap = new Map<string, ItemStack>();
@@ -400,6 +451,8 @@ defineProperties(Player.prototype, {
       return { equipments: eMap, inventory: iMap };
     },
   },
+
+  // Input permissions
   ipCamera: {
     get: function (): boolean {
       return (this as Player).inputPermissions.isPermissionCategoryEnabled(InputPermissionCategory.Camera);
@@ -416,6 +469,8 @@ defineProperties(Player.prototype, {
       (this as Player).inputPermissions.setPermissionCategory(InputPermissionCategory.Movement, value);
     },
   },
+
+  // State properties
   isInvulnerable: {
     get: function (): boolean {
       return (this as Player).gamemode === GameMode.Creative || (this as Player).gamemode === GameMode.Spectator;
@@ -428,6 +483,8 @@ defineProperties(Player.prototype, {
     },
     enumerable: true,
   },
+
+  // UI methods
   setActionBar: {
     value: function (rawMessage: string | RawMessage): void {
       (this as Player).onScreenDisplay.setActionBar(rawMessage);
@@ -438,11 +495,15 @@ defineProperties(Player.prototype, {
       (this as Player).onScreenDisplay.setTitle(rawMessage, option);
     },
   },
+
+  // Audio methods
   stopSound: {
     value: function (id: string): void {
       (this as Player).runCommand(`stopsound @s ${id}`);
     },
   },
+
+  // XP management
   xp: {
     get: function (): number {
       return (this as Player).getTotalXp();
@@ -499,8 +560,12 @@ defineProperties(Player.prototype, {
   },
 });
 
-// Entity
+// ============================================================================
+// Entity Extensions
+// ============================================================================
+
 defineProperties(Entity.prototype, {
+  // Component shortcuts
   equippableComponent: {
     get: function (): EntityEquippableComponent | undefined {
       return (this as Entity).getComponent(EntityComponentTypes.Equippable);
@@ -549,17 +614,20 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true,
   },
-  //
   typeFamilies: {
     get: function (): string[] {
       return (this as Entity).typeFamilyComponent?.getTypeFamilies() ?? [];
     },
   },
+
+  // Inventory methods
   addItem: {
     value: function (itemStack: ItemStack): void {
       (this as Entity).inventory?.addItem(itemStack);
     },
   },
+
+  // Location properties
   chunk: {
     get: function (): Vector3 {
       return new Vector3(
@@ -569,6 +637,8 @@ defineProperties(Entity.prototype, {
       );
     },
   },
+
+  // Command methods
   commandRun: {
     value: function (...commands: (string | string[])[]): any {
       let result = { successCount: 0 };
@@ -582,21 +652,15 @@ defineProperties(Entity.prototype, {
       return result;
     },
   },
-  coordinates: {
-    get: function (): Vector3 {
-      return new Vector3(
-        Math.floor((this as Entity).x),
-        Math.floor((this as Entity).y),
-        Math.floor((this as Entity).z)
-      );
-    },
-    enumerable: true,
-  },
+
+  // Utility methods
   dispose: {
     value: function (): void {
       (this as Entity).remove();
     },
   },
+
+  // Effect methods
   effectAdd: {
     value: function (
       effectName: string,
@@ -620,6 +684,8 @@ defineProperties(Entity.prototype, {
       }
     },
   },
+
+  // Equipment methods
   getEquipment: {
     value: function (slot: EquipmentSlot): ItemStack | undefined {
       return (this as Entity).equippableComponent?.getEquipment(slot);
@@ -639,12 +705,8 @@ defineProperties(Entity.prototype, {
       return headLoc.offset(Vector3.extend(end));
     },
   },
-  headLocation: {
-    get: function (): Vector3 {
-      return Vector3.extend((this as Entity).getHeadLocation());
-    },
-    enumerable: true,
-  },
+
+  // Health properties
   health: {
     get: function (): number {
       return (this as Entity).healthComponent?.currentValue || 0;
@@ -654,6 +716,8 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true,
   },
+
+  // Head location shortcuts
   hx: {
     get: function (): number {
       return (this as Entity).headLocation.x;
@@ -672,12 +736,16 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true,
   },
+
+  // Inventory shortcuts
   inventory: {
     get: function (): Container | undefined {
       return (this as Entity).inventoryComponent?.container;
     },
     enumerable: true,
   },
+
+  // State checks
   isPlayer: {
     get: function (): boolean {
       return (this as Entity).typeId === "minecraft:player";
@@ -690,6 +758,8 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true,
   },
+
+  // Health shortcuts
   maxHealth: {
     get: function (): number {
       return (this as Entity).healthComponent?.effectiveMax || 0;
@@ -702,6 +772,8 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true,
   },
+
+  // Projectile properties
   projectileOwner: {
     get: function (): Entity | undefined {
       return (this as Entity).projectileComponent?.owner;
@@ -711,6 +783,8 @@ defineProperties(Entity.prototype, {
       if (comp) comp.owner = entity;
     },
   },
+
+  // Riding properties
   ride: {
     get: function (): Entity | undefined {
       return (this as Entity).ridingComponent?.entityRidingOn;
@@ -723,6 +797,8 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true,
   },
+
+  // Rotation property
   rotation: {
     get: function (): Vector2 {
       return Vector2.extend((this as Entity).getRotation());
@@ -732,11 +808,15 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true,
   },
+
+  // Equipment setters
   setEquipment: {
     value: function (slot: EquipmentSlot, item: ItemStack): boolean | undefined {
       return (this as Entity).equippableComponent?.setEquipment(slot, item);
     },
   },
+
+  // Equipment slot shortcuts
   mainHandItem: {
     get: function (): ItemStack | undefined {
       return this.getEquipment?.(EquipmentSlot.Mainhand);
@@ -785,6 +865,8 @@ defineProperties(Entity.prototype, {
       this.setEquipment?.(EquipmentSlot.Feet, item);
     },
   },
+
+  // Speed property
   speed: {
     get: function (): number {
       return (this as Entity).movementComponent?.currentValue ?? 0;
@@ -794,6 +876,8 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true,
   },
+
+  // Taming properties
   tameOwner: {
     get: function (): Entity | undefined {
       return (this as Entity).tameableComponent?.tamedToPlayer;
@@ -802,11 +886,15 @@ defineProperties(Entity.prototype, {
       return (this as Entity).tameableComponent?.tame(player);
     },
   },
+
+  // Conversion methods
   toItemStack: {
     value: function (): ItemStack | undefined {
       return (this as Entity).itemComponent?.itemStack;
     },
   },
+
+  // Vector properties
   velocity: {
     get: function (): Vector3 {
       return Vector3.extend((this as Entity).getVelocity());
@@ -819,7 +907,18 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true,
   },
-  // axis/coord
+
+  // Coordinate shortcuts
+  coordinates: {
+    get: function (): Vector3 {
+      return new Vector3(
+        Math.floor((this as Entity).x),
+        Math.floor((this as Entity).y),
+        Math.floor((this as Entity).z)
+      );
+    },
+    enumerable: true,
+  },
   cx: {
     get: function (): number {
       return (this as Entity).coordinates.x;
@@ -835,6 +934,14 @@ defineProperties(Entity.prototype, {
   cz: {
     get: function (): number {
       return (this as Entity).coordinates.z;
+    },
+    enumerable: true,
+  },
+
+  // Location axis shortcuts
+  headLocation: {
+    get: function (): Vector3 {
+      return Vector3.extend((this as Entity).getHeadLocation());
     },
     enumerable: true,
   },
@@ -871,6 +978,8 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true,
   },
+
+  // Rotation axis shortcuts
   rx: {
     get: function (): number {
       return (this as Entity).rotation.x;
@@ -893,6 +1002,8 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true,
   },
+
+  // Velocity axis shortcuts
   vx: {
     get: function (): number {
       return (this as Entity).velocity.x;
@@ -911,6 +1022,8 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true,
   },
+
+  // View direction axis shortcuts
   vdx: {
     get: function (): number {
       return (this as Entity).viewDirection.x;
@@ -931,7 +1044,10 @@ defineProperties(Entity.prototype, {
   },
 });
 
-// Container
+// ============================================================================
+// Container Extensions
+// ============================================================================
+
 defineProperties(Container.prototype, {
   forEachSlot: {
     value: function (cb: (slotObj: any, slotId: number) => void): void {
@@ -971,24 +1087,22 @@ defineProperties(Container.prototype, {
   },
 });
 
-// BlockPermutation
+// ============================================================================
+// BlockPermutation Extensions
+// ============================================================================
+
 defineProperties(BlockPermutation.prototype, {
-  getState: {
-    value: function (state: string): any {
-      return (this as BlockPermutation).getAllStates()[state];
-    },
-  },
   setState: {
     value: function (state: string, value: any): BlockPermutation {
-      return BlockPermutation.resolve((this as BlockPermutation).type.id, {
-        ...(this as BlockPermutation).getAllStates(),
-        [state]: value,
-      });
+      return (this as BlockPermutation).withState(state as any, value);
     },
   },
 });
 
-// ScriptEventCommandMessageAfterEvent
+// ============================================================================
+// ScriptEventCommandMessageAfterEvent Extensions
+// ============================================================================
+
 defineProperties(ScriptEventCommandMessageAfterEvent.prototype, {
   source: {
     get: function (): Block | Entity | undefined {
@@ -1007,7 +1121,10 @@ defineProperties(ScriptEventCommandMessageAfterEvent.prototype, {
   },
 });
 
-// CustomCommandOrigin
+// ============================================================================
+// CustomCommandOrigin Extensions
+// ============================================================================
+
 defineProperties(CustomCommandOrigin.prototype, {
   source: {
     get: function (): Block | Entity | undefined {
@@ -1027,7 +1144,10 @@ defineProperties(CustomCommandOrigin.prototype, {
   },
 });
 
-// Dimension
+// ============================================================================
+// Dimension Extensions
+// ============================================================================
+
 defineProperties(Dimension.prototype, {
   commandRun: {
     value: function (...commands: (string | string[])[]): any {
@@ -1049,15 +1169,15 @@ defineProperties(Dimension.prototype, {
       const weatherTypes: string[] = Object.values(WeatherType);
       for (const weatherType of weatherTypes) {
         (this as Dimension).setWeather(weatherType as WeatherType, eventId);
-        if (weatherTracker.has(eventId)) {
-          const currentWeather = weatherTracker.get(eventId);
-          weatherTracker.delete(eventId);
+        if (weatherData.has(eventId)) {
+          const currentWeather = weatherData.get(eventId);
+          weatherData.delete(eventId);
           return currentWeather;
         }
       }
       return undefined;
     },
-    set: function (v: { type: WeatherType; duration: number }) {
+    set: function (v: WeatherOptions) {
       (this as Dimension).setWeather(v.type, v.duration);
     },
   },

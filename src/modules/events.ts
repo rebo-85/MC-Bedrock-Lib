@@ -1,143 +1,102 @@
-import { Entity, Player, ItemStack, EquipmentSlot, system, world } from "@minecraft/server";
-import { EntityManager, PlayerManager } from "./EntityManager";
+import { Entity, EquipmentSlot, ItemStack, Player, system, world } from "@minecraft/server";
 import { XpData } from "../interface";
+import { EntityManager, PlayerManager } from "./EntityManager";
 
-class Event {
-  constructor() {}
-}
+// Base Event Classes
+class Event {}
 
-class AfterEvent extends Event {
-  constructor() {
-    super();
-  }
-}
+class AfterEvent extends Event {}
 
 class BeforeEvent extends Event {
-  cancel: boolean = false;
-  constructor() {
-    super();
-  }
+  cancel = false;
 }
+
+// Player Events
 export class PlayerAfterEvent extends AfterEvent {
-  player: Player;
-  constructor(player: Player) {
+  constructor(public player: Player) {
     super();
-    this.player = player;
-  }
-}
-export class PlayerJumpAfterEvent extends PlayerAfterEvent {
-  constructor(player: Player) {
-    super(player);
-  }
-}
-export class PlayerOnAirJumpAfterEvent extends PlayerAfterEvent {
-  constructor(player: Player) {
-    super(player);
   }
 }
 
-export class ItemAfterEvent extends PlayerAfterEvent {
-  itemStack: ItemStack;
-  constructor(player: Player, itemStack: ItemStack) {
-    super(player);
-    this.itemStack = itemStack;
-  }
-}
-export class PlayerOnEquipAfterEvent extends ItemAfterEvent {
-  equipmentSlot: EquipmentSlot;
-  constructor(player: Player, itemStack: ItemStack, equipmentSlot: EquipmentSlot) {
-    super(player, itemStack);
-    this.equipmentSlot = equipmentSlot;
-  }
-}
+export class PlayerJumpAfterEvent extends PlayerAfterEvent {}
 
-export class PlayerOnUnequipAfterEvent extends PlayerOnEquipAfterEvent {
-  constructor(player: Player, itemStack: ItemStack, equipmentSlot: EquipmentSlot) {
-    super(player, itemStack, equipmentSlot);
-  }
-}
+export class PlayerOnAirJumpAfterEvent extends PlayerAfterEvent {}
 
 export class PlayerXpOrbCollectAfterEvent extends PlayerAfterEvent {
-  xpValue: number;
-
-  constructor(player: Player, xpValue: number) {
+  constructor(player: Player, public xpValue: number) {
     super(player);
-    this.xpValue = xpValue;
   }
 }
 
+// Item Events
+export class ItemAfterEvent extends PlayerAfterEvent {
+  constructor(player: Player, public itemStack: ItemStack) {
+    super(player);
+  }
+}
+
+export class PlayerOnEquipAfterEvent extends ItemAfterEvent {
+  constructor(player: Player, itemStack: ItemStack, public equipmentSlot: EquipmentSlot) {
+    super(player, itemStack);
+  }
+}
+
+export class PlayerOnUnequipAfterEvent extends PlayerOnEquipAfterEvent {}
+
+// Entity Events
 export class EntityAfterEvent extends AfterEvent {
-  entity: Entity;
-  constructor(entity: Entity) {
+  constructor(public entity: Entity) {
     super();
-    this.entity = entity;
   }
 }
-export class EntityOnGroundAfterEvent extends EntityAfterEvent {
-  constructor(entity: Entity) {
-    super(entity);
-  }
-}
-export class EntitySneakAfterEvent extends EntityAfterEvent {
-  constructor(entity: Entity) {
-    super(entity);
-  }
-}
-export class EntityUnsneakAfterEvent extends EntityAfterEvent {
-  constructor(entity: Entity) {
-    super(entity);
-  }
-}
-// signals
+
+export class EntityOnGroundAfterEvent extends EntityAfterEvent {}
+
+export class EntitySneakAfterEvent extends EntityAfterEvent {}
+
+export class EntityUnsneakAfterEvent extends EntityAfterEvent {}
+
+// Event Signals
 export class EventSignal {
   protected _events: Map<string, any> = new Map();
-  protected _isInitialized: boolean = false;
-  private _process: number = null;
-  private _isDisposed: boolean = false;
+  protected _isInit = false;
+  private _proc: number | null = null;
+  private _disposed = false;
 
-  subscribe(cb: (e: any) => void) {
+  subscribe(cb: (e: any) => void): void {
     this._init();
     const process = () => {
       this._main(cb);
-      if (!this._isDisposed) this._process = system.run(process);
+      if (!this._disposed) this._proc = system.run(process);
     };
-    this._process = system.run(process);
+    this._proc = system.run(process);
   }
-  unsubscribe() {
-    this._isDisposed = true;
-    system.clearRun(this._process);
+
+  unsubscribe(): void {
+    this._disposed = true;
+    if (this._proc !== null) system.clearRun(this._proc);
   }
+
   protected _main(cb: (e: any) => void): void {}
   protected _init(): void {
-    this._isInitialized = true;
+    this._isInit = true;
   }
 }
 
+// Player Event Signals
 export class PlayerEventSignal extends EventSignal {
-  players: Player[];
-
-  constructor() {
-    super();
-  }
+  protected players: Player[] = [];
 
   protected async _init(): Promise<void> {
-    await this._initPlayers();
-  }
-
-  private async _initPlayers(): Promise<void> {
     const pm = new PlayerManager();
     this.players = await pm.players;
-    this._isInitialized = true;
+    this._isInit = true;
   }
 }
 
 export class PlayerJumpAfterEventSignal extends PlayerEventSignal {
-  constructor() {
-    super();
-  }
-
-  protected _main(cb: (e: PlayerJumpAfterEvent) => void) {
-    if (!this._isInitialized) return;
+  protected _main(cb: (e: PlayerJumpAfterEvent) => void): void {
+    if (!this._isInit) return;
 
     for (const player of this.players) {
       const isTracked = this._events.has(player.id);
@@ -155,12 +114,8 @@ export class PlayerJumpAfterEventSignal extends PlayerEventSignal {
 }
 
 export class PlayerStartJumpingAfterEventSignal extends PlayerEventSignal {
-  constructor() {
-    super();
-  }
-
-  protected _main(cb: (e: PlayerJumpAfterEvent) => void) {
-    if (!this._isInitialized) return;
+  protected _main(cb: (e: PlayerJumpAfterEvent) => void): void {
+    if (!this._isInit) return;
 
     for (const player of this.players) {
       const isTracked = this._events.has(player.id);
@@ -178,12 +133,8 @@ export class PlayerStartJumpingAfterEventSignal extends PlayerEventSignal {
 }
 
 export class PlayerStopJumpingAfterEventSignal extends PlayerEventSignal {
-  constructor() {
-    super();
-  }
-
-  protected _main(cb: (e: PlayerJumpAfterEvent) => void) {
-    if (!this._isInitialized) return;
+  protected _main(cb: (e: PlayerJumpAfterEvent) => void): void {
+    if (!this._isInit) return;
 
     for (const player of this.players) {
       const isTracked = this._events.has(player.id);
@@ -201,12 +152,8 @@ export class PlayerStopJumpingAfterEventSignal extends PlayerEventSignal {
 }
 
 export class PlayerOnAirJumpAfterEventSignal extends PlayerEventSignal {
-  constructor() {
-    super();
-  }
-
-  protected _main(cb: (e: PlayerOnAirJumpAfterEvent) => void) {
-    if (!this._isInitialized) return;
+  protected _main(cb: (e: PlayerOnAirJumpAfterEvent) => void): void {
+    if (!this._isInit) return;
 
     for (const player of this.players) {
       const isTracked = this._events.has(player.id);
@@ -229,30 +176,27 @@ export class PlayerOnAirJumpAfterEventSignal extends PlayerEventSignal {
 }
 
 export class PlayerOnEquipAfterEventSignal extends PlayerEventSignal {
-  private _previousEquipments: Map<string, Map<EquipmentSlot, ItemStack>> = new Map();
-  constructor() {
-    super();
-  }
+  private _prevEquip: Map<string, Map<EquipmentSlot, ItemStack>> = new Map();
 
-  protected _main(cb: (e: PlayerOnEquipAfterEvent) => void) {
-    if (!this._isInitialized) return;
+  protected _main(cb: (e: PlayerOnEquipAfterEvent) => void): void {
+    if (!this._isInit) return;
 
     for (const player of this.players) {
-      let slots = Object.values(EquipmentSlot) as EquipmentSlot[];
-      const currentEquipments = new Map<EquipmentSlot, ItemStack>();
+      const slots = Object.values(EquipmentSlot) as EquipmentSlot[];
+      const currEquip = new Map<EquipmentSlot, ItemStack>();
       for (const slot of slots) {
         const item = player.getEquipment(slot);
-        if (item) currentEquipments.set(slot, item);
+        if (item) currEquip.set(slot, item);
       }
 
-      const previousEquipments = this._previousEquipments.get(player.id) || currentEquipments;
-      for (const [slot, itemStack] of currentEquipments) {
-        const prevItemStack = previousEquipments.get(slot);
+      const prevEquip = this._prevEquip.get(player.id) || currEquip;
+      for (const [slot, item] of currEquip) {
+        const prevItem = prevEquip.get(slot);
         const isTracked = this._events.has(player.id);
-        const hasChanged = !itemStack.compare(prevItemStack);
+        const changed = !item.compare(prevItem);
 
-        if (!isTracked && hasChanged) {
-          const event = new PlayerOnEquipAfterEvent(player, itemStack, slot);
+        if (!isTracked && changed) {
+          const event = new PlayerOnEquipAfterEvent(player, item, slot);
           this._events.set(player.id, event);
           cb(event);
         } else if (isTracked) {
@@ -260,41 +204,38 @@ export class PlayerOnEquipAfterEventSignal extends PlayerEventSignal {
         }
       }
 
-      this._previousEquipments.set(player.id, currentEquipments);
+      this._prevEquip.set(player.id, currEquip);
     }
   }
 }
 
 export class PlayerOnUnequipAfterEventSignal extends PlayerEventSignal {
-  private _previousEquipments: Map<string, Map<EquipmentSlot, ItemStack>> = new Map();
-  constructor() {
-    super();
-  }
+  private _prevEquip: Map<string, Map<EquipmentSlot, ItemStack>> = new Map();
 
-  protected _main(cb: (e: PlayerOnUnequipAfterEvent) => void) {
-    if (!this._isInitialized) return;
+  protected _main(cb: (e: PlayerOnUnequipAfterEvent) => void): void {
+    if (!this._isInit) return;
 
     for (const player of this.players) {
-      let slots = Object.values(EquipmentSlot) as EquipmentSlot[];
-      const currentEquipments = new Map<EquipmentSlot, ItemStack>();
+      const slots = Object.values(EquipmentSlot) as EquipmentSlot[];
+      const currEquip = new Map<EquipmentSlot, ItemStack>();
       for (const slot of slots) {
         const item = player.getEquipment(slot);
-        if (item) currentEquipments.set(slot, item);
+        if (item) currEquip.set(slot, item);
       }
 
-      const previousEquipments = this._previousEquipments.get(player.id);
-      if (!previousEquipments) {
-        this._previousEquipments.set(player.id, currentEquipments);
+      const prevEquip = this._prevEquip.get(player.id);
+      if (!prevEquip) {
+        this._prevEquip.set(player.id, currEquip);
         continue;
       }
 
-      for (const [slot, prevItemStack] of previousEquipments) {
-        const currItemStack = currentEquipments.get(slot);
+      for (const [slot, prevItem] of prevEquip) {
+        const currItem = currEquip.get(slot);
         const isTracked = this._events.has(player.id);
-        const wasUnequipped = prevItemStack && (!currItemStack || !prevItemStack.compare(currItemStack));
+        const unequipped = prevItem && (!currItem || !prevItem.compare(currItem));
 
-        if (!isTracked && wasUnequipped) {
-          const event = new PlayerOnUnequipAfterEvent(player, prevItemStack, slot);
+        if (!isTracked && unequipped) {
+          const event = new PlayerOnUnequipAfterEvent(player, prevItem, slot);
           this._events.set(player.id, event);
           cb(event);
         } else if (isTracked) {
@@ -302,125 +243,107 @@ export class PlayerOnUnequipAfterEventSignal extends PlayerEventSignal {
         }
       }
 
-      this._previousEquipments.set(player.id, currentEquipments);
+      this._prevEquip.set(player.id, currEquip);
     }
   }
 }
 
 export class PlayerXpOrbCollectAfterEventSignal extends PlayerEventSignal {
-  private _orbSpawnData: Map<string, Map<string, XpData>> = new Map();
-
-  constructor() {
-    super();
-  }
+  private static readonly XP_ORB_ID = "minecraft:xp_orb";
+  private static readonly COLLECT_DIST = 2;
+  private _orbData: Map<string, Map<string, XpData>> = new Map();
 
   protected async _init(): Promise<void> {
     await super._init();
+    this._subscribeOrbEvents();
+  }
 
+  private _subscribeOrbEvents(): void {
     world.afterEvents.entitySpawn.subscribe(({ entity }) => {
-      if (entity.typeId === "minecraft:xp_orb") {
-        const playersXpData = new Map<string, XpData>();
+      if (entity.typeId !== PlayerXpOrbCollectAfterEventSignal.XP_ORB_ID) return;
 
-        for (const player of this.players) {
-          playersXpData.set(player.id, {
-            level: player.level,
-            xpEarnedAtCurrentLevel: player.xpEarnedAtCurrentLevel,
-            totalXpNeededForNextLevel: player.totalXpNeededForNextLevel,
-          });
-        }
-
-        this._orbSpawnData.set(entity.id, playersXpData);
+      const plrXpData = new Map<string, XpData>();
+      for (const plr of this.players) {
+        plrXpData.set(plr.id, this._captureXpData(plr));
       }
+      this._orbData.set(entity.id, plrXpData);
     });
 
     world.beforeEvents.entityRemove.subscribe(({ removedEntity }) => {
-      if (removedEntity.typeId === "minecraft:xp_orb") {
-        const playersXpBefore = this._orbSpawnData.get(removedEntity.id);
-        if (!playersXpBefore) return;
-
-        const player = removedEntity.dimension.getPlayers({
-          maxDistance: 2,
-          location: removedEntity.location,
-          closest: 1,
-        })[0];
-
-        const xpBefore = playersXpBefore.get(player.id);
-        if (!xpBefore) return;
-
-        const xpAfter: XpData = {
-          level: player.level,
-          xpEarnedAtCurrentLevel: player.xpEarnedAtCurrentLevel,
-          totalXpNeededForNextLevel: player.totalXpNeededForNextLevel,
-        };
-
-        let xpOrbValue = 0;
-        const hasLeveledUp = xpAfter.level > xpBefore.level;
-
-        if (hasLeveledUp) {
-          xpOrbValue =
-            xpBefore.totalXpNeededForNextLevel - xpBefore.xpEarnedAtCurrentLevel + xpAfter.xpEarnedAtCurrentLevel;
-        } else {
-          xpOrbValue = xpAfter.xpEarnedAtCurrentLevel - xpBefore.xpEarnedAtCurrentLevel;
-        }
-
-        const hasCollected = xpOrbValue > 0;
-        if (hasCollected) {
-          const event = new PlayerXpOrbCollectAfterEvent(player, xpOrbValue);
-          this._events.set(player.id, event);
-
-          for (const [orbId, playersData] of this._orbSpawnData) {
-            if (playersData.has(player.id)) {
-              playersData.set(player.id, xpAfter);
-            }
-          }
-        }
-
-        this._orbSpawnData.delete(removedEntity.id);
-      }
+      if (removedEntity.typeId !== PlayerXpOrbCollectAfterEventSignal.XP_ORB_ID) return;
+      this._handleOrbRemove(removedEntity);
     });
   }
 
-  protected _main(cb: (e: PlayerXpOrbCollectAfterEvent) => void): void {
-    if (!this._isInitialized) return;
+  private _captureXpData(plr: Player): XpData {
+    return {
+      level: plr.level,
+      xpEarnedAtCurrentLevel: plr.xpEarnedAtCurrentLevel,
+      totalXpNeededForNextLevel: plr.totalXpNeededForNextLevel,
+    };
+  }
 
-    for (const [playerId, event] of this._events) {
+  private _handleOrbRemove(orb: Entity): void {
+    const plrXpBefore = this._orbData.get(orb.id);
+    if (!plrXpBefore) return;
+
+    const plr = orb.dimension.getPlayers({
+      maxDistance: PlayerXpOrbCollectAfterEventSignal.COLLECT_DIST,
+      location: orb.location,
+      closest: 1,
+    })[0];
+
+    const xpBefore = plrXpBefore.get(plr.id);
+    if (!xpBefore) return;
+
+    const xpAfter = this._captureXpData(plr);
+    const xpVal = this._calcXpValue(xpBefore, xpAfter);
+
+    if (xpVal > 0) {
+      const event = new PlayerXpOrbCollectAfterEvent(plr, xpVal);
+      this._events.set(plr.id, event);
+
+      for (const plrData of this._orbData.values()) {
+        if (plrData.has(plr.id)) plrData.set(plr.id, xpAfter);
+      }
+    }
+
+    this._orbData.delete(orb.id);
+  }
+
+  private _calcXpValue(before: XpData, after: XpData): number {
+    if (after.level > before.level) {
+      return before.totalXpNeededForNextLevel - before.xpEarnedAtCurrentLevel + after.xpEarnedAtCurrentLevel;
+    }
+    return after.xpEarnedAtCurrentLevel - before.xpEarnedAtCurrentLevel;
+  }
+
+  protected _main(cb: (e: PlayerXpOrbCollectAfterEvent) => void): void {
+    if (!this._isInit) return;
+
+    for (const [plrId, event] of this._events) {
       cb(event);
-      this._events.delete(playerId);
+      this._events.delete(plrId);
     }
   }
 }
 
+// Entity Event Signals
 export class EntityEventSignal extends EventSignal {
-  entities: Entity[];
-
-  constructor() {
-    super();
-  }
+  protected entities: Entity[] = [];
 
   protected async _init(): Promise<void> {
-    await this._initEntities();
-  }
-
-  private async _initEntities(): Promise<void> {
     const em = new EntityManager();
     this.entities = await em.entities;
-    this._isInitialized = true;
+    this._isInit = true;
   }
 }
 
-export class EntityItemEventSignal extends EntityEventSignal {
-  constructor() {
-    super();
-  }
-}
+export class EntityItemEventSignal extends EntityEventSignal {}
 
 export class EntitySneakAfterEventSignal extends EntityEventSignal {
-  constructor() {
-    super();
-  }
-
-  protected _main(cb: (e: EntitySneakAfterEvent) => void) {
-    if (!this._isInitialized) return;
+  protected _main(cb: (e: EntitySneakAfterEvent) => void): void {
+    if (!this._isInit) return;
 
     for (const entity of this.entities) {
       const isTracked = this._events.has(entity.id);
@@ -437,12 +360,8 @@ export class EntitySneakAfterEventSignal extends EntityEventSignal {
 }
 
 export class EntityUnsneakAfterEventSignal extends EntityEventSignal {
-  constructor() {
-    super();
-  }
-
-  protected _main(cb: (e: EntityUnsneakAfterEvent) => void) {
-    if (!this._isInitialized) return;
+  protected _main(cb: (e: EntityUnsneakAfterEvent) => void): void {
+    if (!this._isInit) return;
 
     for (const entity of this.entities) {
       const isTracked = this._events.has(entity.id);
@@ -460,12 +379,8 @@ export class EntityUnsneakAfterEventSignal extends EntityEventSignal {
 }
 
 export class EntityOnGroundAfterEventSignal extends EntityEventSignal {
-  constructor() {
-    super();
-  }
-
-  protected _main(cb: (e: EntityOnGroundAfterEvent) => void) {
-    if (!this._isInitialized) return;
+  protected _main(cb: (e: EntityOnGroundAfterEvent) => void): void {
+    if (!this._isInit) return;
 
     for (const entity of this.entities) {
       const isTracked = this._events.has(entity.id);

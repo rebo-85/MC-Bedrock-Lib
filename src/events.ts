@@ -11,11 +11,11 @@ world.afterEvents.itemStopUse.subscribe((e: any) => {
   if (playersUsingItem.has(player.id)) playersUsingItem.delete(player.id);
 });
 
-export const weatherTracker = new Map<number, WeatherType>();
+export const weatherData = new Map<number, WeatherType>();
 world.beforeEvents.weatherChange.subscribe((e: any) => {
   const { previousWeather, duration } = e;
   if (duration == world.getTimeOfDay()) {
-    weatherTracker.set(duration, previousWeather);
+    weatherData.set(duration, previousWeather);
     e.cancel = true;
   }
 });

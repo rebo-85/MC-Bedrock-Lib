@@ -1,29 +1,31 @@
 import { ContainerSlot, Player } from "@minecraft/server";
-import { PlayerManager, Manager, world } from "mc-bedrock-lib";
+import { Manager, world } from "mc-bedrock-lib";
 
+/**
+ * PassiveMending
+ * Applies mending to all items in inventory when XP orbs are collected.
+ * Repairs damaged items with mending enchantment proportional to XP value.
+ */
 export class PassiveMending extends Manager {
-  players: Player[] = [];
+  private static readonly REPAIR_MULTIPLIER = 2;
 
   async _init(): Promise<void> {
-    const pm = new PlayerManager();
-    this.players = await pm.players;
+    world.afterEvents.playerXpOrbCollect.subscribe((ev) => this._handleXpCollect(ev.player, ev.xpValue));
+  }
 
-    world.afterEvents.playerXpOrbCollect.subscribe(({ player, xpValue }) => {
-      const inv = player.inventory;
-      if (!inv) return;
+  private _handleXpCollect(player: Player, xpValue: number): void {
+    const inv = player.inventory;
+    if (!inv) return;
 
-      inv.forEachSlot((slot: ContainerSlot, slotId: number) => {
-        const item = slot.getItem();
+    inv.forEachSlot((slot: ContainerSlot) => {
+      const item = slot.getItem();
+      if (!item || !item.hasEnchantment("mending")) return;
+      if (item.durability >= item.maxDurability) return;
 
-        if (item && item.hasEnchantment("mending")) {
-          if (item.durability < item.maxDurability) {
-            const repairAmount = Math.min(xpValue * 2, item.maxDurability - item.durability);
-            item.durability += repairAmount;
-            slot.setItem(item);
-            player.xp -= xpValue;
-          }
-        }
-      });
+      const repairAmt = Math.min(xpValue * PassiveMending.REPAIR_MULTIPLIER, item.maxDurability - item.durability);
+      item.durability += repairAmt;
+      slot.setItem(item);
+      player.xp -= xpValue;
     });
   }
 }

@@ -9,12 +9,6 @@ import {
   SystemBeforeEvents,
 } from "@minecraft/server";
 import { BlockRegistry, CommandRegistry, ItemRegistry } from "modules";
-
-/**
- * Project-wide namespace string, used for identifiers.
- */
-export const namespace: string = "eternal";
-
 /**
  * Reference to the Minecraft world instance.
  */
