@@ -4,7 +4,7 @@
   "main": "dist/mc-bedrock-lib.js",
   "types": "dist/mc-bedrock-lib.d.ts",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --outfile=dist/mc-bedrock-lib.js --format=esm --external:@minecraft/server --external:@minecraft/server-ui && npx dts-bundle-generator -o dist/mc-bedrock-lib.d.ts ./src/index.ts --external-imports @minecraft/server --external-imports @minecraft/server-ui && node scripts/patch-dts.js",
+    "build": "esbuild src/index.ts --bundle --outfile=dist/mc-bedrock-lib.js --format=esm --external:@minecraft/server --external:@minecraft/server-ui && npm run types && node scripts/patch-dts.js",
     "dev": "nodemon --watch src --ext js,ts --exec \"npm run build\"",
     "types": "tsc --emitDeclarationOnly --declaration --outFile dist/mc-bedrock-lib.d.ts",
     "release": "standard-version"

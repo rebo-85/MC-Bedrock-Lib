@@ -126,7 +126,7 @@ export class OneBlock extends Manager {
     this._ready = true;
   }
 
-  _main(): void {
+  protected async _main(): Promise<void> {
     if (!this._ready) return;
 
     const block = this._dimension.getBlock(this.location);

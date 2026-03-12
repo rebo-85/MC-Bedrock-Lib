@@ -30,22 +30,29 @@ export class RunTimeOut extends Run {
 }
 
 export class Manager {
-  private _process: number;
-  private _isDisposed: boolean;
+  private _process: number | undefined;
+  private _isDisposed = false;
   constructor() {
     this._init();
 
     const process = () => {
-      this._main();
-      if (!this._isDisposed) this._process = system.run(process);
+      Promise.resolve()
+        .then(() => this._main())
+        .catch((err) => {
+          console.error(err);
+        })
+        .then(() => {
+          if (!this._isDisposed) this._process = system.run(process);
+        });
     };
     this._process = system.run(process);
   }
 
   protected _init(): void {}
-  protected _main(): void {}
+  protected async _main(): Promise<void> {}
   dispose() {
     this._isDisposed = true;
-    system.clearRun(this._process);
+    if (this._process != null) system.clearRun(this._process);
+    this._process = undefined;
   }
 }

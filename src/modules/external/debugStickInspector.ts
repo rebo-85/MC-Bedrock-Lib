@@ -9,7 +9,7 @@ export class DebugStickInspector extends Manager {
   private static readonly DEBUG_STICK_ID = "minecraft:debug_stick";
   private static readonly MAX_DISTANCE = 7;
 
-  protected _main(): void {
+  protected async _main(): Promise<void> {
     for (const player of world.getAllPlayers()) {
       if (!this._hasDebugStick(player)) continue;
 

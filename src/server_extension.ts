@@ -38,6 +38,9 @@ import {
   RawMessage,
   EntityTypeFamilyComponent,
   CustomCommandOrigin,
+  HudElement,
+  TitleDisplayOptions,
+  HudVisibility,
 } from "@minecraft/server";
 import {
   PlayerJumpAfterEventSignal,
@@ -145,6 +148,15 @@ defineProperties(World.prototype, {
   },
   players: {
     get: createPlayersGetter(),
+    enumerable: true,
+  },
+  time: {
+    get: function (): number {
+      return (this as World).getTimeOfDay();
+    },
+    set: function (time: number) {
+      (this as World).setTimeOfDay(time);
+    },
     enumerable: true,
   },
 });
@@ -419,8 +431,29 @@ defineProperties(Player.prototype, {
     get: function (): GameMode {
       return (this as Player).getGameMode();
     },
-    set: function (gamemode: GameMode) {
-      (this as Player).setGameMode(gamemode);
+    set: function (gamemode: GameMode | string) {
+      const player = this as Player;
+      if (typeof gamemode === "string") {
+        const key = gamemode.toLowerCase().trim();
+        const gmMap: Record<string, GameMode> = {
+          creative: GameMode.Creative,
+          survival: GameMode.Survival,
+          adventure: GameMode.Adventure,
+          spectator: GameMode.Spectator,
+        };
+        if (gmMap[key] !== undefined) {
+          player.setGameMode(gmMap[key]);
+          return;
+        }
+        for (const k of Object.keys(GameMode)) {
+          if (k.toLowerCase() === key) {
+            player.setGameMode((GameMode as any)[k]);
+            return;
+          }
+        }
+        return;
+      }
+      player.setGameMode(gamemode);
     },
     enumerable: true,
   },
@@ -491,8 +524,38 @@ defineProperties(Player.prototype, {
     },
   },
   setTitle: {
-    value: function (rawMessage: string, option?: any): void {
+    value: function (rawMessage: string, option?: TitleDisplayOptions): void {
       (this as Player).onScreenDisplay.setTitle(rawMessage, option);
+    },
+  },
+  updateSubtitle: {
+    value: function (rawMessage: string | RawMessage): void {
+      (this as Player).onScreenDisplay.updateSubtitle(rawMessage);
+    },
+  },
+  getHiddenHud: {
+    value: function (): HudElement[] {
+      return (this as Player).onScreenDisplay.getHiddenHudElements();
+    },
+  },
+  hideHudExcept: {
+    value: function (hudElements?: HudElement[]): void {
+      (this as Player).onScreenDisplay.hideAllExcept(hudElements);
+    },
+  },
+  resetHud: {
+    value: function (): void {
+      (this as Player).onScreenDisplay.resetHudElementsVisibility();
+    },
+  },
+  isHudHidden: {
+    value: function (hudElement: HudElement): boolean {
+      return (this as Player).onScreenDisplay.isForcedHidden(hudElement);
+    },
+  },
+  setHudVisibility: {
+    value: function (visible: HudVisibility, hudElements?: HudElement[]): void {
+      return (this as Player).onScreenDisplay.setHudVisibility(visible, hudElements);
     },
   },
 
@@ -633,7 +696,7 @@ defineProperties(Entity.prototype, {
       return new Vector3(
         Math.floor((this as Entity).x / 16),
         Math.floor((this as Entity).y / 16),
-        Math.floor((this as Entity).z / 16)
+        Math.floor((this as Entity).z / 16),
       );
     },
   },
@@ -664,9 +727,9 @@ defineProperties(Entity.prototype, {
   effectAdd: {
     value: function (
       effectName: string,
-      durationInSeconds: number = 30,
+      durationInSeconds: number | string = 30,
       amplifier: number = 0,
-      hideParticles: boolean = false
+      hideParticles: boolean = false,
     ): void {
       (this as Entity).runCommand(`effect @s ${effectName} ${durationInSeconds} ${amplifier} ${hideParticles}`);
     },
@@ -914,7 +977,7 @@ defineProperties(Entity.prototype, {
       return new Vector3(
         Math.floor((this as Entity).x),
         Math.floor((this as Entity).y),
-        Math.floor((this as Entity).z)
+        Math.floor((this as Entity).z),
       );
     },
     enumerable: true,

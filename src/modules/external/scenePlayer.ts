@@ -9,7 +9,23 @@ import {
   CustomCommandOrigin,
   CustomCommandStatus,
 } from "@minecraft/server";
-import { SceneData, SceneFrame, Vector2, Vector3, CommandRegistry, Run, toCommandDecimal } from "mc-bedrock-lib";
+import { Vector2, Vector3, CommandRegistry, Run, toCommandDecimal } from "mc-bedrock-lib";
+
+export interface SceneFrame {
+  time: number;
+  data_points: Vector3;
+  interpolation?: string;
+}
+
+interface SceneData {
+  sceneId: string;
+  animationId: string;
+  positions?: SceneFrame[];
+  rotations?: SceneFrame[];
+  commands: { time: number; data_points: string[] }[];
+  sounds: { time: number; data_points: string[] }[];
+  length: number;
+}
 
 class ScenePlayer {
   scenes: Map<string, SceneData> = new Map();

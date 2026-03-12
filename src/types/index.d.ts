@@ -92,7 +92,19 @@ declare module "@minecraft/server" {
     /** Sets a message in the player's action bar. */
     setActionBar(rawMessage: string | RawMessage): void;
     /** Sets a title message for the player, with optional display options. */
-    setTitle(rawMessage: string, option?: any): void;
+    setTitle(rawMessage: string, option?: TitleDisplayOptions): void;
+    /** Updates the player's subtitle message. */
+    updateSubtitle(rawMessage: string | RawMessage): void;
+    /** Returns the currently hidden HUD elements for the player. */
+    getHiddenHud(): HudElement[];
+    /** Hides all HUD elements except the provided list. */
+    hideHudExcept(hudElements?: HudElement[]): void;
+    /** Resets HUD elements visibility to their default state. */
+    resetHud(): void;
+    /** Returns true if a specific HUD element is currently forced hidden. */
+    isHudHidden(hudElement: HudElement): boolean;
+    /** Sets visibility for HUD elements. */
+    setHudVisibility(visible: HudVisibility, hudElements?: HudElement[]): void;
     /** Whether player movement input is enabled. */
     ipMovement: boolean;
     /** Whether player camera input is enabled. */
@@ -106,7 +118,12 @@ declare module "@minecraft/server" {
     /** The chunk position of the entity as a Vector3. */
     readonly chunk: Vector3;
     /** Adds an effect to the entity for a given duration and amplifier. */
-    effectAdd(effectName: string, durationInSeconds?: number, amplifier?: number, hideParticles?: boolean): void;
+    effectAdd(
+      effectName: string,
+      durationInSeconds?: number | string,
+      amplifier?: number,
+      hideParticles?: boolean,
+    ): void;
     /** Clears effects from the entity. If effectType is provided, only that effect is cleared. */
     effectClear(effectType?: string | null): void;
     /** Sends a Molang query to the entity. */
