@@ -105,6 +105,8 @@ declare module "@minecraft/server" {
     isHudHidden(hudElement: HudElement): boolean;
     /** Sets visibility for HUD elements. */
     setHudVisibility(visible: HudVisibility, hudElements?: HudElement[]): void;
+    /** Sets the field of view for the player. */
+    setFov(value: number, easeOption?: EaseOptions): void;
     /** Whether player movement input is enabled. */
     ipMovement: boolean;
     /** Whether player camera input is enabled. */

@@ -12,8 +12,8 @@ interface MazeOptions {
 }
 
 export class MazeGenerator {
-  private _w: number;
-  private _l: number;
+  private _w: number = 0;
+  private _l: number = 0;
   private _grid: number[][] = [];
   private _vis: boolean[][] = [];
   private _entrance: { x: number; y: number } | null = null;
@@ -91,7 +91,7 @@ export class MazeGenerator {
         [1, 0],
         [-1, 0],
         [0, 1],
-        [0, -1],
+        [0, -1]
       ];
       for (const [dx, dy] of neighbors) {
         const nx = cx + dx;
@@ -126,16 +126,11 @@ export class MazeGenerator {
 
     if (opts.entranceEdge) {
       const entCoord =
-        opts.entranceCoord ??
-        (opts.entranceEdge === "left" || opts.entranceEdge === "right"
-          ? Math.floor(this._l / 2)
-          : Math.floor(this._w / 2));
+        opts.entranceCoord ?? (opts.entranceEdge === "left" || opts.entranceEdge === "right" ? Math.floor(this._l / 2) : Math.floor(this._w / 2));
       if (opts.entranceEdge === "left" || opts.entranceEdge === "right") {
-        if (entCoord < 0 || entCoord >= this._l)
-          throw new Error(`Entrance coord ${entCoord} out of bounds for edge '${opts.entranceEdge}'`);
+        if (entCoord < 0 || entCoord >= this._l) throw new Error(`Entrance coord ${entCoord} out of bounds for edge '${opts.entranceEdge}'`);
       } else {
-        if (entCoord < 0 || entCoord >= this._w)
-          throw new Error(`Entrance coord ${entCoord} out of bounds for edge '${opts.entranceEdge}'`);
+        if (entCoord < 0 || entCoord >= this._w) throw new Error(`Entrance coord ${entCoord} out of bounds for edge '${opts.entranceEdge}'`);
       }
       [sx, sy] = this._forceToEdge(entCoord, opts.entranceEdge);
       entranceDeclared = true;
@@ -143,9 +138,7 @@ export class MazeGenerator {
       sx = opts.entrance.x;
       sy = opts.entrance.y;
       if (!(sx === 0 || sx === this._w - 1 || sy === 0 || sy === this._l - 1))
-        throw new Error(
-          "Explicit entrance must be on the outer border (use entranceEdge/entranceCoord for edge placement)"
-        );
+        throw new Error("Explicit entrance must be on the outer border (use entranceEdge/entranceCoord for edge placement)");
       entranceDeclared = true;
     } else {
       sx = Math.floor(this._w / 2);
@@ -153,15 +146,11 @@ export class MazeGenerator {
     }
 
     if (opts.exitEdge) {
-      const exitCoord =
-        opts.exitCoord ??
-        (opts.exitEdge === "left" || opts.exitEdge === "right" ? Math.floor(this._l / 2) : Math.floor(this._w / 2));
+      const exitCoord = opts.exitCoord ?? (opts.exitEdge === "left" || opts.exitEdge === "right" ? Math.floor(this._l / 2) : Math.floor(this._w / 2));
       if (opts.exitEdge === "left" || opts.exitEdge === "right") {
-        if (exitCoord < 0 || exitCoord >= this._l)
-          throw new Error(`Exit coord ${exitCoord} out of bounds for edge '${opts.exitEdge}'`);
+        if (exitCoord < 0 || exitCoord >= this._l) throw new Error(`Exit coord ${exitCoord} out of bounds for edge '${opts.exitEdge}'`);
       } else {
-        if (exitCoord < 0 || exitCoord >= this._w)
-          throw new Error(`Exit coord ${exitCoord} out of bounds for edge '${opts.exitEdge}'`);
+        if (exitCoord < 0 || exitCoord >= this._w) throw new Error(`Exit coord ${exitCoord} out of bounds for edge '${opts.exitEdge}'`);
       }
       [ex, ey] = this._forceToEdge(exitCoord, opts.exitEdge);
       exitDeclared = true;
@@ -224,19 +213,14 @@ export class MazeGenerator {
             [1, 0],
             [0, 1],
             [-1, 0],
-            [0, -1],
+            [0, -1]
           ];
           for (const [dx, dy] of dirs) {
             const aX = x + dx,
               aY = y + dy,
               bX = x - dx,
               bY = y - dy;
-            if (
-              this._inBounds(aX, aY) &&
-              this._inBounds(bX, bY) &&
-              this._grid[aY][aX] === 1 &&
-              this._grid[bY][bX] === 1
-            ) {
+            if (this._inBounds(aX, aY) && this._inBounds(bX, bY) && this._grid[aY][aX] === 1 && this._grid[bY][bX] === 1) {
               candidates.push([x, y]);
               break;
             }
@@ -257,12 +241,7 @@ export class MazeGenerator {
     }
 
     for (let x = 0; x < this._w; x++) {
-      if (
-        this._grid[0][x] === 1 &&
-        !(entranceDeclared && x === sx && 0 === sy) &&
-        !(exitDeclared && x === ex && 0 === ey)
-      )
-        this._grid[0][x] = 0;
+      if (this._grid[0][x] === 1 && !(entranceDeclared && x === sx && 0 === sy) && !(exitDeclared && x === ex && 0 === ey)) this._grid[0][x] = 0;
       if (
         this._grid[this._l - 1][x] === 1 &&
         !(entranceDeclared && x === sx && this._l - 1 === sy) &&
@@ -271,12 +250,7 @@ export class MazeGenerator {
         this._grid[this._l - 1][x] = 0;
     }
     for (let y = 0; y < this._l; y++) {
-      if (
-        this._grid[y][0] === 1 &&
-        !(entranceDeclared && 0 === sx && y === sy) &&
-        !(exitDeclared && 0 === ex && y === ey)
-      )
-        this._grid[y][0] = 0;
+      if (this._grid[y][0] === 1 && !(entranceDeclared && 0 === sx && y === sy) && !(exitDeclared && 0 === ex && y === ey)) this._grid[y][0] = 0;
       if (
         this._grid[y][this._w - 1] === 1 &&
         !(entranceDeclared && this._w - 1 === sx && y === sy) &&
@@ -335,10 +309,8 @@ export class MazeGenerator {
     if (opts.entranceEdge && opts.entranceCoord != null) {
       const c = opts.entranceCoord;
       const edge = opts.entranceEdge;
-      if ((edge === "left" || edge === "right") && (c < 0 || c >= this._l))
-        throw new Error("Entrance coord out of bounds");
-      if ((edge === "top" || edge === "bottom") && (c < 0 || c >= this._w))
-        throw new Error("Entrance coord out of bounds");
+      if ((edge === "left" || edge === "right") && (c < 0 || c >= this._l)) throw new Error("Entrance coord out of bounds");
+      if ((edge === "top" || edge === "bottom") && (c < 0 || c >= this._w)) throw new Error("Entrance coord out of bounds");
     }
     if (opts.exitEdge && opts.exitCoord != null) {
       const c = opts.exitCoord;
@@ -361,26 +333,18 @@ export class MazeGenerator {
     if (this._entrance) {
       const { x: sx, y: sy } = this._entrance;
       for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + sx, y: loc.y + gy, z: loc.z + sy }, air);
-      if (sx === 0)
-        for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + sx - 1, y: loc.y + gy, z: loc.z + sy }, air);
-      if (sx === this._w - 1)
-        for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + sx + 1, y: loc.y + gy, z: loc.z + sy }, air);
-      if (sy === 0)
-        for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + sx, y: loc.y + gy, z: loc.z + sy - 1 }, air);
-      if (sy === this._l - 1)
-        for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + sx, y: loc.y + gy, z: loc.z + sy + 1 }, air);
+      if (sx === 0) for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + sx - 1, y: loc.y + gy, z: loc.z + sy }, air);
+      if (sx === this._w - 1) for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + sx + 1, y: loc.y + gy, z: loc.z + sy }, air);
+      if (sy === 0) for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + sx, y: loc.y + gy, z: loc.z + sy - 1 }, air);
+      if (sy === this._l - 1) for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + sx, y: loc.y + gy, z: loc.z + sy + 1 }, air);
     }
     if (this._exit) {
       const { x: ex, y: ey } = this._exit;
       for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + ex, y: loc.y + gy, z: loc.z + ey }, air);
-      if (ex === 0)
-        for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + ex - 1, y: loc.y + gy, z: loc.z + ey }, air);
-      if (ex === this._w - 1)
-        for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + ex + 1, y: loc.y + gy, z: loc.z + ey }, air);
-      if (ey === 0)
-        for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + ex, y: loc.y + gy, z: loc.z + ey - 1 }, air);
-      if (ey === this._l - 1)
-        for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + ex, y: loc.y + gy, z: loc.z + ey + 1 }, air);
+      if (ex === 0) for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + ex - 1, y: loc.y + gy, z: loc.z + ey }, air);
+      if (ex === this._w - 1) for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + ex + 1, y: loc.y + gy, z: loc.z + ey }, air);
+      if (ey === 0) for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + ex, y: loc.y + gy, z: loc.z + ey - 1 }, air);
+      if (ey === this._l - 1) for (let gy = 0; gy < size.y; gy++) wdim.setBlockType({ x: loc.x + ex, y: loc.y + gy, z: loc.z + ey + 1 }, air);
     }
   }
 }

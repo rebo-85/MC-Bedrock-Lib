@@ -6,7 +6,7 @@
   "scripts": {
     "build": "esbuild src/index.ts --bundle --outfile=dist/mc-bedrock-lib.js --format=esm --external:@minecraft/server --external:@minecraft/server-ui && npm run types && node scripts/patch-dts.js",
     "dev": "nodemon --watch src --ext js,ts --exec \"npm run build\"",
-    "types": "tsc --emitDeclarationOnly --declaration --outFile dist/mc-bedrock-lib.d.ts",
+    "types": "dts-bundle-generator -o dist/mc-bedrock-lib.d.ts --project tsconfig.json --no-check src/index.ts",
     "release": "standard-version"
   },
   "description": "Utility library for Minecraft Bedrock API",
@@ -19,6 +19,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "dts-bundle-generator": "^5.9.0",
     "esbuild": "^0.25.10",
     "nodemon": "^3.1.10",
     "standard-version": "^9.5.0",

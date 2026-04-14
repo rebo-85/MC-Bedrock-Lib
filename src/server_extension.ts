@@ -41,6 +41,7 @@ import {
   HudElement,
   TitleDisplayOptions,
   HudVisibility,
+  EaseOptions
 } from "@minecraft/server";
 import {
   PlayerJumpAfterEventSignal,
@@ -52,7 +53,7 @@ import {
   PlayerOnUnequipAfterEventSignal,
   EntityOnGroundAfterEventSignal,
   EntitySneakAfterEventSignal,
-  PlayerXpOrbCollectAfterEventSignal,
+  PlayerXpOrbCollectAfterEventSignal
 } from "./modules/index";
 
 import { Vector3, Vector2 } from "./modules/index";
@@ -69,53 +70,53 @@ defineProperties(WorldAfterEvents.prototype, {
   entitySneak: {
     get: function (): EntitySneakAfterEventSignal {
       return new EntitySneakAfterEventSignal();
-    },
+    }
   },
   entityUnsneak: {
     get: function (): EntityUnsneakAfterEventSignal {
       return new EntityUnsneakAfterEventSignal();
-    },
+    }
   },
   entityOnGround: {
     get: function (): EntityOnGroundAfterEventSignal {
       return new EntityOnGroundAfterEventSignal();
-    },
+    }
   },
   playerOnAirJump: {
     get: function (): PlayerOnAirJumpAfterEventSignal {
       return new PlayerOnAirJumpAfterEventSignal();
-    },
+    }
   },
   playerOnEquip: {
     get: function (): PlayerOnEquipAfterEventSignal {
       return new PlayerOnEquipAfterEventSignal();
-    },
+    }
   },
   playerOnUnequip: {
     get: function (): PlayerOnUnequipAfterEventSignal {
       return new PlayerOnUnequipAfterEventSignal();
-    },
+    }
   },
   playerJump: {
     get: function (): PlayerJumpAfterEventSignal {
       return new PlayerJumpAfterEventSignal();
-    },
+    }
   },
   playerStartJumping: {
     get: function (): PlayerStartJumpingAfterEventSignal {
       return new PlayerStartJumpingAfterEventSignal();
-    },
+    }
   },
   playerStopJumping: {
     get: function (): PlayerStopJumpingAfterEventSignal {
       return new PlayerStopJumpingAfterEventSignal();
-    },
+    }
   },
   playerXpOrbCollect: {
     get: function (): PlayerXpOrbCollectAfterEventSignal {
       return new PlayerXpOrbCollectAfterEventSignal();
-    },
-  },
+    }
+  }
 });
 
 // ============================================================================
@@ -132,23 +133,23 @@ defineProperties(World.prototype, {
         dim?.getEntities(selector).forEach((e: Entity) => entities.add(e));
       });
       return Array.from(entities);
-    },
+    }
   },
   end: {
     get: createDimGetter("minecraft:the_end"),
-    enumerable: true,
+    enumerable: true
   },
   nether: {
     get: createDimGetter("minecraft:nether"),
-    enumerable: true,
+    enumerable: true
   },
   overworld: {
     get: createDimGetter("minecraft:overworld"),
-    enumerable: true,
+    enumerable: true
   },
   players: {
     get: createPlayersGetter(),
-    enumerable: true,
+    enumerable: true
   },
   time: {
     get: function (): number {
@@ -157,8 +158,8 @@ defineProperties(World.prototype, {
     set: function (time: number) {
       (this as World).setTimeOfDay(time);
     },
-    enumerable: true,
-  },
+    enumerable: true
+  }
 });
 
 // ============================================================================
@@ -171,7 +172,7 @@ defineProperties(ItemStack.prototype, {
     value: function (...enchantments: Enchantment[]): void {
       const enchantmentList = enchantments.flat();
       enchantmentList.forEach((ench: any) => (this as ItemStack).enchantableComponent?.addEnchantments(ench));
-    },
+    }
   },
 
   // Comparison methods
@@ -196,7 +197,7 @@ defineProperties(ItemStack.prototype, {
         return true;
       }
       return false;
-    },
+    }
   },
 
   // Durability properties
@@ -214,12 +215,12 @@ defineProperties(ItemStack.prototype, {
       }
       dc.damage = dmg;
     },
-    enumerable: true,
+    enumerable: true
   },
 
   durability: {
     get: function (): number {
-      if (!this.durabilityComponent) return 0;
+      if (!(this as ItemStack).durabilityComponent) return 0;
 
       return (this as ItemStack).maxDurability - (this as ItemStack).damage;
     },
@@ -235,7 +236,7 @@ defineProperties(ItemStack.prototype, {
       }
       dc.damage = dmg;
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // Component shortcuts
@@ -243,57 +244,57 @@ defineProperties(ItemStack.prototype, {
     get: function (): ItemDurabilityComponent | undefined {
       return (this as ItemStack).getComponent(ItemComponentTypes.Durability);
     },
-    enumerable: true,
+    enumerable: true
   },
   enchantableComponent: {
     get: function (): ItemEnchantableComponent | undefined {
       return (this as ItemStack).getComponent(ItemComponentTypes.Enchantable);
     },
-    enumerable: true,
+    enumerable: true
   },
   enchantmentSlots: {
     get: function (): EnchantmentSlot[] | undefined {
       return (this as ItemStack).enchantableComponent?.slots;
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // Enchantment getters
   getEnchantment: {
     value: function (enchantmentType: EnchantmentType): Enchantment | undefined {
       return (this as ItemStack).enchantableComponent?.getEnchantment(enchantmentType);
-    },
+    }
   },
   hasEnchantment: {
     value: function (enchantmentType: EnchantmentType | string): boolean {
       return !!(this as ItemStack).enchantableComponent?.hasEnchantment(enchantmentType);
-    },
+    }
   },
 
   // Utility properties
   isVanillaBlock: {
     get: function (): boolean {
       return !!BlockTypes.get((this as ItemStack).typeId);
-    },
+    }
   },
   maxDurability: {
     get: function (): number {
       return (this as ItemStack).durabilityComponent?.maxDurability ?? 0;
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // Enchantment removal
   removeAllEnchantments: {
     value: function (): void {
       return (this as ItemStack).enchantableComponent?.removeAllEnchantments();
-    },
+    }
   },
   removeEnchantment: {
     value: function (enchantmentType: EnchantmentType): void {
       return (this as ItemStack).enchantableComponent?.removeEnchantment(enchantmentType);
-    },
-  },
+    }
+  }
 });
 
 // ============================================================================
@@ -331,12 +332,10 @@ defineProperties(Block.prototype, {
         [1, 0, 1],
         [1, 1, -1],
         [1, 1, 0],
-        [1, 1, 1],
+        [1, 1, 1]
       ];
-      return ofs
-        .map(([dx, dy, dz]) => (this as Block).offset(new Vector3(dx, dy, dz)))
-        .filter((b): b is Block => b !== undefined);
-    },
+      return ofs.map(([dx, dy, dz]) => (this as Block).offset(new Vector3(dx, dy, dz))).filter((b): b is Block => b !== undefined);
+    }
   },
   getItems: {
     value: function (typeId?: string): Map<number, ItemStack> {
@@ -350,25 +349,25 @@ defineProperties(Block.prototype, {
         }
       }
       return items;
-    },
+    }
   },
 
   // Block state methods
   getState: {
     value: function (state: string): any {
       return (this as Block).permutation.getState(state as any);
-    },
+    }
   },
   getAllStates: {
     value: function (): any {
       return (this as Block).permutation.getAllStates();
-    },
+    }
   },
   setState: {
     value: function (state: string, value: any): void {
       const perm = (this as Block).permutation.withState(state as any, value);
       (this as Block).setPermutation(perm);
-    },
+    }
   },
 
   // Component shortcuts
@@ -376,14 +375,14 @@ defineProperties(Block.prototype, {
     get: function (): Container | undefined {
       return (this as Block).inventoryComponent?.container;
     },
-    enumerable: true,
+    enumerable: true
   },
   inventoryComponent: {
     get: function (): BlockInventoryComponent | undefined {
       return (this as Block).getComponent(BlockComponentTypes.Inventory);
     },
-    enumerable: true,
-  },
+    enumerable: true
+  }
 });
 
 // ============================================================================
@@ -395,8 +394,35 @@ defineProperties(Player.prototype, {
   clearItem: {
     value: function (typeId: string, maxCount: string = "", data: number = -1): void {
       (this as Player).runCommand(`clear @s ${typeId} ${data} ${maxCount}`);
-    },
+    }
   },
+
+  getItems: {
+    value: function (typeId?: string): { equipments: Map<string, ItemStack>; inventory: Map<number, ItemStack> } {
+      const eMap = new Map<string, ItemStack>();
+      const slots: string[] = Object.values(EquipmentSlot).filter((value) => typeof value === "string");
+      for (const slot of slots) {
+        const item = (this as Player).getEquipment(slot as EquipmentSlot);
+        if (item) {
+          if (typeId) {
+            if (item.typeId === typeId) eMap.set(slot, item);
+          } else eMap.set(slot, item);
+        }
+      }
+      const iMap = new Map<number, ItemStack>();
+      const inv = (this as Player).inventory;
+      for (let i = 0; i < inv.size; i++) {
+        const item = inv.getItem(i);
+        if (item) {
+          if (typeId) {
+            if (item.typeId === typeId) iMap.set(i, item);
+          } else iMap.set(i, item);
+        }
+      }
+      return { equipments: eMap, inventory: iMap };
+    }
+  },
+
   damageItem: {
     value: function (slot: EquipmentSlot, damage: number = 1, ignoreUnbreaking = false): ItemStack | undefined {
       const eqSlot = (this as Player).equippableComponent?.getEquipmentSlot(slot);
@@ -423,7 +449,7 @@ defineProperties(Player.prototype, {
       }
 
       return item;
-    },
+    }
   },
 
   // Gamemode property
@@ -439,7 +465,7 @@ defineProperties(Player.prototype, {
           creative: GameMode.Creative,
           survival: GameMode.Survival,
           adventure: GameMode.Adventure,
-          spectator: GameMode.Spectator,
+          spectator: GameMode.Spectator
         };
         if (gmMap[key] !== undefined) {
           player.setGameMode(gmMap[key]);
@@ -455,34 +481,13 @@ defineProperties(Player.prototype, {
       }
       player.setGameMode(gamemode);
     },
-    enumerable: true,
+    enumerable: true
   },
 
-  // Item query methods
-  getItems: {
-    value: function (typeId?: string): { equipments: Map<string, ItemStack>; inventory: Map<number, ItemStack> } {
-      const eMap = new Map<string, ItemStack>();
-      const slots: string[] = Object.values(EquipmentSlot).filter((value) => typeof value === "string");
-      for (const slot of slots) {
-        const item = (this as Player).getEquipment(slot as EquipmentSlot);
-        if (item) {
-          if (typeId) {
-            if (item.typeId === typeId) eMap.set(slot, item);
-          } else eMap.set(slot, item);
-        }
-      }
-      const iMap = new Map<number, ItemStack>();
-      const inv = (this as Player).inventory;
-      for (let i = 0; i < inv.size; i++) {
-        const item = inv.getItem(i);
-        if (item) {
-          if (typeId) {
-            if (item.typeId === typeId) iMap.set(i, item);
-          } else iMap.set(i, item);
-        }
-      }
-      return { equipments: eMap, inventory: iMap };
-    },
+  setFov: {
+    value: function (value: number, easeOption?: EaseOptions): void {
+      (this as Player).camera.setFov({ fov: value, easeOptions: easeOption });
+    }
   },
 
   // Input permissions
@@ -492,7 +497,7 @@ defineProperties(Player.prototype, {
     },
     set: function (value: boolean) {
       (this as Player).inputPermissions.setPermissionCategory(InputPermissionCategory.Camera, value);
-    },
+    }
   },
   ipMovement: {
     get: function (): boolean {
@@ -500,7 +505,7 @@ defineProperties(Player.prototype, {
     },
     set: function (value: boolean) {
       (this as Player).inputPermissions.setPermissionCategory(InputPermissionCategory.Movement, value);
-    },
+    }
   },
 
   // State properties
@@ -508,62 +513,62 @@ defineProperties(Player.prototype, {
     get: function (): boolean {
       return (this as Player).gamemode === GameMode.Creative || (this as Player).gamemode === GameMode.Spectator;
     },
-    enumerable: true,
+    enumerable: true
   },
   isUsingItem: {
     get: function (): boolean {
       return playersUsingItem.has((this as Player).id);
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // UI methods
   setActionBar: {
     value: function (rawMessage: string | RawMessage): void {
       (this as Player).onScreenDisplay.setActionBar(rawMessage);
-    },
+    }
   },
   setTitle: {
     value: function (rawMessage: string, option?: TitleDisplayOptions): void {
       (this as Player).onScreenDisplay.setTitle(rawMessage, option);
-    },
+    }
   },
   updateSubtitle: {
     value: function (rawMessage: string | RawMessage): void {
       (this as Player).onScreenDisplay.updateSubtitle(rawMessage);
-    },
+    }
   },
   getHiddenHud: {
     value: function (): HudElement[] {
       return (this as Player).onScreenDisplay.getHiddenHudElements();
-    },
+    }
   },
   hideHudExcept: {
     value: function (hudElements?: HudElement[]): void {
       (this as Player).onScreenDisplay.hideAllExcept(hudElements);
-    },
+    }
   },
   resetHud: {
     value: function (): void {
       (this as Player).onScreenDisplay.resetHudElementsVisibility();
-    },
+    }
   },
   isHudHidden: {
     value: function (hudElement: HudElement): boolean {
       return (this as Player).onScreenDisplay.isForcedHidden(hudElement);
-    },
+    }
   },
   setHudVisibility: {
     value: function (visible: HudVisibility, hudElements?: HudElement[]): void {
       return (this as Player).onScreenDisplay.setHudVisibility(visible, hudElements);
-    },
+    }
   },
 
   // Audio methods
   stopSound: {
     value: function (id: string): void {
       (this as Player).runCommand(`stopsound @s ${id}`);
-    },
+    }
   },
 
   // XP management
@@ -619,8 +624,8 @@ defineProperties(Player.prototype, {
       if (target.xpAtLevel > 0) {
         player.addExperience(target.xpAtLevel);
       }
-    },
-  },
+    }
+  }
 });
 
 // ============================================================================
@@ -633,72 +638,68 @@ defineProperties(Entity.prototype, {
     get: function (): EntityEquippableComponent | undefined {
       return (this as Entity).getComponent(EntityComponentTypes.Equippable);
     },
-    enumerable: true,
+    enumerable: true
   },
   healthComponent: {
     get: function (): EntityHealthComponent | undefined {
       return (this as Entity).getComponent(EntityComponentTypes.Health);
     },
-    enumerable: true,
+    enumerable: true
   },
   inventoryComponent: {
     get: function (): EntityInventoryComponent | undefined {
       return (this as Entity).getComponent(EntityComponentTypes.Inventory);
     },
-    enumerable: true,
+    enumerable: true
   },
   itemComponent: {
     get: function (): EntityItemComponent | undefined {
       return (this as Entity).getComponent(EntityComponentTypes.Item);
     },
-    enumerable: true,
+    enumerable: true
   },
   movementComponent: {
     get: function (): EntityMovementComponent | undefined {
       return (this as Entity).getComponent(EntityComponentTypes.Movement);
     },
-    enumerable: true,
+    enumerable: true
   },
   projectileComponent: {
     get: function (): EntityProjectileComponent | undefined {
       return (this as Entity).getComponent(EntityComponentTypes.Projectile);
     },
-    enumerable: true,
+    enumerable: true
   },
   tameableComponent: {
     get: function (): EntityTameableComponent | undefined {
       return (this as Entity).getComponent(EntityComponentTypes.Tameable);
     },
-    enumerable: true,
+    enumerable: true
   },
   typeFamilyComponent: {
     get: function (): EntityTypeFamilyComponent | undefined {
       return (this as Entity).getComponent(EntityComponentTypes.TypeFamily);
     },
-    enumerable: true,
+    enumerable: true
   },
   typeFamilies: {
     get: function (): string[] {
       return (this as Entity).typeFamilyComponent?.getTypeFamilies() ?? [];
-    },
+    }
   },
 
   // Inventory methods
   addItem: {
     value: function (itemStack: ItemStack): void {
       (this as Entity).inventory?.addItem(itemStack);
-    },
+    }
   },
 
   // Location properties
   chunk: {
     get: function (): Vector3 {
-      return new Vector3(
-        Math.floor((this as Entity).x / 16),
-        Math.floor((this as Entity).y / 16),
-        Math.floor((this as Entity).z / 16),
-      );
-    },
+      return new Vector3(Math.floor((this as Entity).x / 16), Math.floor((this as Entity).y / 16), Math.floor((this as Entity).z / 16));
+    }
   },
 
   // Command methods
@@ -713,26 +714,21 @@ defineProperties(Entity.prototype, {
         if (cr.successCount > 0) result.successCount++;
       });
       return result;
-    },
+    }
   },
 
   // Utility methods
   dispose: {
     value: function (): void {
       (this as Entity).remove();
-    },
+    }
   },
 
   // Effect methods
   effectAdd: {
-    value: function (
-      effectName: string,
-      durationInSeconds: number | string = 30,
-      amplifier: number = 0,
-      hideParticles: boolean = false,
-    ): void {
+    value: function (effectName: string, durationInSeconds: number | string = 30, amplifier: number = 0, hideParticles: boolean = false): void {
       (this as Entity).runCommand(`effect @s ${effectName} ${durationInSeconds} ${amplifier} ${hideParticles}`);
-    },
+    }
   },
   effectClear: {
     value: function (effectType: string | null = null): void {
@@ -745,14 +741,14 @@ defineProperties(Entity.prototype, {
           (this as Entity).runCommand(`effect @s ${effectType} 0`);
           break;
       }
-    },
+    }
   },
 
   // Equipment methods
   getEquipment: {
     value: function (slot: EquipmentSlot): ItemStack | undefined {
       return (this as Entity).equippableComponent?.getEquipment(slot);
-    },
+    }
   },
   getFacingOffset: {
     value: function (distance: number, offset: Vector3 = new Vector3(0, 0, 0)): Vector3 {
@@ -762,11 +758,11 @@ defineProperties(Entity.prototype, {
       const end = {
         x: view_dir.x * distance + normalized_right_dir.x * offset.x + offset.z,
         y: view_dir.y * distance + offset.y,
-        z: view_dir.z * distance + normalized_right_dir.z * offset.x + offset.z,
+        z: view_dir.z * distance + normalized_right_dir.z * offset.x + offset.z
       };
       const headLoc = Vector3.extend((this as Entity).headLocation);
       return headLoc.offset(Vector3.extend(end));
-    },
+    }
   },
 
   // Health properties
@@ -777,7 +773,7 @@ defineProperties(Entity.prototype, {
     set: function (value: number) {
       return (this as Entity).healthComponent?.setCurrentValue(value);
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // Head location shortcuts
@@ -785,19 +781,19 @@ defineProperties(Entity.prototype, {
     get: function (): number {
       return (this as Entity).headLocation.x;
     },
-    enumerable: true,
+    enumerable: true
   },
   hy: {
     get: function (): number {
       return (this as Entity).headLocation.y;
     },
-    enumerable: true,
+    enumerable: true
   },
   hz: {
     get: function (): number {
       return (this as Entity).headLocation.z;
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // Inventory shortcuts
@@ -805,7 +801,7 @@ defineProperties(Entity.prototype, {
     get: function (): Container | undefined {
       return (this as Entity).inventoryComponent?.container;
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // State checks
@@ -813,13 +809,13 @@ defineProperties(Entity.prototype, {
     get: function (): boolean {
       return (this as Entity).typeId === "minecraft:player";
     },
-    enumerable: true,
+    enumerable: true
   },
   isRiding: {
     get: function (): boolean {
       return (this as Entity).ridingComponent ? true : false;
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // Health shortcuts
@@ -827,13 +823,13 @@ defineProperties(Entity.prototype, {
     get: function (): number {
       return (this as Entity).healthComponent?.effectiveMax || 0;
     },
-    enumerable: true,
+    enumerable: true
   },
   missingHealth: {
     get: function (): number {
       return (this as Entity).maxHealth - (this as Entity).health;
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // Projectile properties
@@ -844,7 +840,7 @@ defineProperties(Entity.prototype, {
     set: function (entity: Entity) {
       const comp = (this as Entity).projectileComponent;
       if (comp) comp.owner = entity;
-    },
+    }
   },
 
   // Riding properties
@@ -852,13 +848,13 @@ defineProperties(Entity.prototype, {
     get: function (): Entity | undefined {
       return (this as Entity).ridingComponent?.entityRidingOn;
     },
-    enumerable: true,
+    enumerable: true
   },
   ridingComponent: {
     get: function (): EntityRidingComponent | undefined {
       return (this as Entity).getComponent(EntityComponentTypes.Riding);
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // Rotation property
@@ -869,64 +865,64 @@ defineProperties(Entity.prototype, {
     set: function (rotation: Vector2) {
       (this as Entity).setRotation(rotation);
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // Equipment setters
   setEquipment: {
     value: function (slot: EquipmentSlot, item: ItemStack): boolean | undefined {
       return (this as Entity).equippableComponent?.setEquipment(slot, item);
-    },
+    }
   },
 
   // Equipment slot shortcuts
   mainHandItem: {
     get: function (): ItemStack | undefined {
-      return this.getEquipment?.(EquipmentSlot.Mainhand);
+      return (this as Entity).getEquipment?.(EquipmentSlot.Mainhand);
     },
     set: function (item: ItemStack | undefined) {
-      this.setEquipment?.(EquipmentSlot.Mainhand, item);
-    },
+      (this as Entity).setEquipment?.(EquipmentSlot.Mainhand, item as any);
+    }
   },
   offhandItem: {
     get: function (): ItemStack | undefined {
-      return this.getEquipment?.(EquipmentSlot.Offhand);
+      return (this as Entity).getEquipment?.(EquipmentSlot.Offhand);
     },
     set: function (item: ItemStack | undefined) {
-      this.setEquipment?.(EquipmentSlot.Offhand, item);
-    },
+      (this as Entity).setEquipment?.(EquipmentSlot.Offhand, item as any);
+    }
   },
   headItem: {
     get: function (): ItemStack | undefined {
-      return this.getEquipment?.(EquipmentSlot.Head);
+      return (this as Entity).getEquipment?.(EquipmentSlot.Head);
     },
     set: function (item: ItemStack | undefined) {
-      this.setEquipment?.(EquipmentSlot.Head, item);
-    },
+      (this as Entity).setEquipment?.(EquipmentSlot.Head, item as any);
+    }
   },
   chestItem: {
     get: function (): ItemStack | undefined {
-      return this.getEquipment?.(EquipmentSlot.Chest);
+      return (this as Entity).getEquipment?.(EquipmentSlot.Chest);
     },
     set: function (item: ItemStack | undefined) {
-      this.setEquipment?.(EquipmentSlot.Chest, item);
-    },
+      (this as Entity).setEquipment?.(EquipmentSlot.Chest, item as any);
+    }
   },
   legsItem: {
     get: function (): ItemStack | undefined {
-      return this.getEquipment?.(EquipmentSlot.Legs);
+      return (this as Entity).getEquipment?.(EquipmentSlot.Legs);
     },
     set: function (item: ItemStack | undefined) {
-      this.setEquipment?.(EquipmentSlot.Legs, item);
-    },
+      (this as Entity).setEquipment?.(EquipmentSlot.Legs, item as any);
+    }
   },
   feetItem: {
     get: function (): ItemStack | undefined {
-      return this.getEquipment?.(EquipmentSlot.Feet);
+      return (this as Entity).getEquipment?.(EquipmentSlot.Feet);
     },
     set: function (item: ItemStack | undefined) {
-      this.setEquipment?.(EquipmentSlot.Feet, item);
-    },
+      (this as Entity).setEquipment?.(EquipmentSlot.Feet, item as any);
+    }
   },
 
   // Speed property
@@ -937,7 +933,7 @@ defineProperties(Entity.prototype, {
     set: function (value: number) {
       return (this as Entity).movementComponent?.setCurrentValue(value);
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // Taming properties
@@ -947,14 +943,14 @@ defineProperties(Entity.prototype, {
     },
     set: function (player: Player) {
       return (this as Entity).tameableComponent?.tame(player);
-    },
+    }
   },
 
   // Conversion methods
   toItemStack: {
     value: function (): ItemStack | undefined {
       return (this as Entity).itemComponent?.itemStack;
-    },
+    }
   },
 
   // Vector properties
@@ -962,43 +958,39 @@ defineProperties(Entity.prototype, {
     get: function (): Vector3 {
       return Vector3.extend((this as Entity).getVelocity());
     },
-    enumerable: true,
+    enumerable: true
   },
   viewDirection: {
     get: function (): Vector3 {
       return Vector3.extend((this as Entity).getViewDirection());
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // Coordinate shortcuts
   coordinates: {
     get: function (): Vector3 {
-      return new Vector3(
-        Math.floor((this as Entity).x),
-        Math.floor((this as Entity).y),
-        Math.floor((this as Entity).z),
-      );
+      return new Vector3(Math.floor((this as Entity).x), Math.floor((this as Entity).y), Math.floor((this as Entity).z));
     },
-    enumerable: true,
+    enumerable: true
   },
   cx: {
     get: function (): number {
       return (this as Entity).coordinates.x;
     },
-    enumerable: true,
+    enumerable: true
   },
   cy: {
     get: function (): number {
       return (this as Entity).coordinates.y;
     },
-    enumerable: true,
+    enumerable: true
   },
   cz: {
     get: function (): number {
       return (this as Entity).coordinates.z;
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // Location axis shortcuts
@@ -1006,7 +998,7 @@ defineProperties(Entity.prototype, {
     get: function (): Vector3 {
       return Vector3.extend((this as Entity).getHeadLocation());
     },
-    enumerable: true,
+    enumerable: true
   },
   x: {
     get: function (): number {
@@ -1017,7 +1009,7 @@ defineProperties(Entity.prototype, {
       location.x = x;
       (this as Entity).teleport(location);
     },
-    enumerable: true,
+    enumerable: true
   },
   y: {
     get: function (): number {
@@ -1028,7 +1020,7 @@ defineProperties(Entity.prototype, {
       location.y = y;
       (this as Entity).teleport(location);
     },
-    enumerable: true,
+    enumerable: true
   },
   z: {
     get: function (): number {
@@ -1039,7 +1031,7 @@ defineProperties(Entity.prototype, {
       location.z = z;
       (this as Entity).teleport(location);
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // Rotation axis shortcuts
@@ -1052,7 +1044,7 @@ defineProperties(Entity.prototype, {
       rotation.x = rx;
       (this as Entity).setRotation(rotation);
     },
-    enumerable: true,
+    enumerable: true
   },
   ry: {
     get: function (): number {
@@ -1063,7 +1055,7 @@ defineProperties(Entity.prototype, {
       rotation.y = ry;
       (this as Entity).setRotation(rotation);
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // Velocity axis shortcuts
@@ -1071,19 +1063,19 @@ defineProperties(Entity.prototype, {
     get: function (): number {
       return (this as Entity).velocity.x;
     },
-    enumerable: true,
+    enumerable: true
   },
   vy: {
     get: function (): number {
       return (this as Entity).velocity.y;
     },
-    enumerable: true,
+    enumerable: true
   },
   vz: {
     get: function (): number {
       return (this as Entity).velocity.z;
     },
-    enumerable: true,
+    enumerable: true
   },
 
   // View direction axis shortcuts
@@ -1091,20 +1083,20 @@ defineProperties(Entity.prototype, {
     get: function (): number {
       return (this as Entity).viewDirection.x;
     },
-    enumerable: true,
+    enumerable: true
   },
   vdy: {
     get: function (): number {
       return (this as Entity).viewDirection.y;
     },
-    enumerable: true,
+    enumerable: true
   },
   vdz: {
     get: function (): number {
       return (this as Entity).viewDirection.z;
     },
-    enumerable: true,
-  },
+    enumerable: true
+  }
 });
 
 // ============================================================================
@@ -1118,7 +1110,7 @@ defineProperties(Container.prototype, {
         const slotObj = (this as Container).getSlot(slotId);
         cb(slotObj, slotId);
       }
-    },
+    }
   },
   getItems: {
     value: function (): Map<number, ItemStack> {
@@ -1128,7 +1120,7 @@ defineProperties(Container.prototype, {
         if (item) items.set(id, item);
       });
       return items;
-    },
+    }
   },
   sort: {
     value: function (cb: (a: ItemStack, b: ItemStack) => number): void {
@@ -1146,8 +1138,8 @@ defineProperties(Container.prototype, {
       items.forEach(({ item }, index) => {
         (this as Container).setItem(index, item);
       });
-    },
-  },
+    }
+  }
 });
 
 // ============================================================================
@@ -1158,8 +1150,8 @@ defineProperties(BlockPermutation.prototype, {
   setState: {
     value: function (state: string, value: any): BlockPermutation {
       return (this as BlockPermutation).withState(state as any, value);
-    },
-  },
+    }
+  }
 });
 
 // ============================================================================
@@ -1180,8 +1172,8 @@ defineProperties(ScriptEventCommandMessageAfterEvent.prototype, {
           return undefined;
       }
     },
-    enumerable: true,
-  },
+    enumerable: true
+  }
 });
 
 // ============================================================================
@@ -1203,8 +1195,8 @@ defineProperties(CustomCommandOrigin.prototype, {
           return undefined;
       }
     },
-    enumerable: true,
-  },
+    enumerable: true
+  }
 });
 
 // ============================================================================
@@ -1223,7 +1215,7 @@ defineProperties(Dimension.prototype, {
         if (cr.successCount > 0) result.successCount++;
       });
       return result;
-    },
+    }
   },
   weather: {
     get: function (): WeatherType | undefined {
@@ -1242,6 +1234,6 @@ defineProperties(Dimension.prototype, {
     },
     set: function (v: WeatherOptions) {
       (this as Dimension).setWeather(v.type, v.duration);
-    },
-  },
+    }
+  }
 });

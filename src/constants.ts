@@ -6,9 +6,20 @@ import {
   WorldAfterEvents,
   WorldBeforeEvents,
   SystemAfterEvents,
-  SystemBeforeEvents,
+  SystemBeforeEvents
 } from "@minecraft/server";
-import { BlockRegistry, CommandRegistry, ItemRegistry } from "modules";
+import { BlockRegistry, CommandRegistry, ItemRegistry, Vector2 } from "modules";
+export const Direction = {
+  South: new Vector2(0, 0),
+  West: new Vector2(0, 90),
+  North: new Vector2(0, 180),
+  East: new Vector2(0, -90),
+  NorthEast: new Vector2(0, -45),
+  SouthEast: new Vector2(0, 45),
+  SouthWest: new Vector2(0, 135),
+  NorthWest: new Vector2(0, -135)
+};
+
 /**
  * Reference to the Minecraft world instance.
  */

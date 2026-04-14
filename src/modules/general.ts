@@ -99,6 +99,13 @@ export class Vector3 extends Vector2 {
     return new Vector3(rx, this.y, rz);
   }
 
+  snapToBlockCenter() {
+    const x = Math.floor(this.x) + 0.5;
+    const y = Math.floor(this.y);
+    const z = Math.floor(this.z) + 0.5;
+    return new Vector3(x, y, z);
+  }
+
   private _roundToNearestHalf(value: number): number {
     return Math.round(value * 2) / 2;
   }

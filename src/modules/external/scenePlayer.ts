@@ -7,7 +7,7 @@ import {
   CustomCommandParamType,
   CommandPermissionLevel,
   CustomCommandOrigin,
-  CustomCommandStatus,
+  CustomCommandStatus
 } from "@minecraft/server";
 import { Vector2, Vector3, CommandRegistry, Run, toCommandDecimal } from "mc-bedrock-lib";
 
@@ -49,17 +49,18 @@ class ScenePlayer {
         mandatoryParameters: [
           { name: "SceneID", type: CustomCommandParamType.String },
           { name: "actor", type: CustomCommandParamType.EntitySelector },
-          { name: "players", type: CustomCommandParamType.PlayerSelector },
+          { name: "players", type: CustomCommandParamType.PlayerSelector }
         ],
-        permissionLevel: CommandPermissionLevel.Any,
+        permissionLevel: CommandPermissionLevel.Any
       },
       (origin: CustomCommandOrigin, sceneId, actors, players) => {
         let result = { message: `Executing Scene: "${sceneId}"`, status: CustomCommandStatus.Success };
         if (actors.length > 0) {
           if (actors.length == 1) {
-            if (players.length > 0 && origin.source) {
+            const src = origin.source;
+            if (players.length > 0 && src) {
               new Run(() => {
-                this._runScene(origin.source.dimension, actors[0], players, sceneId);
+                this._runScene(src.dimension, actors[0], players, sceneId);
               });
             } else {
               result.message = "No players matched selector";
@@ -106,13 +107,7 @@ class ScenePlayer {
     return null;
   }
 
-  private _setPlayerCamera(
-    player: Player,
-    actorEntity: Entity,
-    framePos: Vector3,
-    frameRot: Vector2,
-    tickDelta: number
-  ) {
+  private _setPlayerCamera(player: Player, actorEntity: Entity, framePos: Vector3, frameRot: Vector2, tickDelta: number) {
     const rel = framePos.offset(new Vector3(-actorEntity.x, -actorEntity.y, -actorEntity.z));
     const rot = rel.rotate(actorEntity.ry);
     const finalPos = rot.offset(Vector3.extend(actorEntity.location));
@@ -121,9 +116,7 @@ class ScenePlayer {
     const ry = -this._normalizeRotation(frameRot.y + actorEntity.ry);
     const cmd = `camera @s set minecraft:free ease ${tickDelta} linear pos ${toCommandDecimal(
       finalPos.x
-    )} ${toCommandDecimal(finalPos.y)} ${toCommandDecimal(finalPos.z)} rot ${toCommandDecimal(rx)} ${toCommandDecimal(
-      ry
-    )}`;
+    )} ${toCommandDecimal(finalPos.y)} ${toCommandDecimal(finalPos.z)} rot ${toCommandDecimal(rx)} ${toCommandDecimal(ry)}`;
     player.commandRun(cmd);
   }
 
@@ -152,14 +145,9 @@ class ScenePlayer {
       playerGameModes.set(player.id, player.gamemode);
       playerCheckpoints.set(player.id, {
         location: Vector3.extend(player.location),
-        rotation: Vector2.extend(player.rotation),
+        rotation: Vector2.extend(player.rotation)
       });
-      player.commandRun(
-        "camera @s clear",
-        "effect @s invisibility infinite 1 true",
-        "hud @s hide all",
-        "gamemode spectator @s"
-      );
+      player.commandRun("camera @s clear", "effect @s invisibility infinite 1 true", "hud @s hide all", "gamemode spectator @s");
       player.ipCamera = false;
       player.ipMovement = false;
     });
@@ -183,9 +171,7 @@ class ScenePlayer {
         if (currentSound) currentSound.data_points.forEach((snd: string) => player.playSound(snd));
       });
       if (tick >= sceneData.length) {
-        players.forEach((player: Player) =>
-          this._resetPlayer(player, playerGameModes.get(player.id)!, playerCheckpoints.get(player.id)!)
-        );
+        players.forEach((player: Player) => this._resetPlayer(player, playerGameModes.get(player.id)!, playerCheckpoints.get(player.id)!));
         system.runTimeout(() => system.clearRun(this.activeScene!), 1);
       } else {
         this.activeScene = system.run(updateScene);
