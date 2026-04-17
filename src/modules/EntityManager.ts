@@ -10,7 +10,7 @@ export class PlayerManager extends Manager {
   private _plrs: Player[] = [];
   private _rdy = false;
 
-  get players(): any {
+  get players(): Player[] {
     return createArrayProxy(
       () => this._plrs,
       () => this._rdy
@@ -39,8 +39,8 @@ export class PlayerManager extends Manager {
       if (e.initialSpawn && !this._plrs.some((p) => p.id === e.player.id)) this._plrs.push(e.player);
     });
 
-    world.afterEvents.playerLeave.subscribe((e) => {
-      this._plrs = this._plrs.filter((p) => p.id !== e.playerId);
+    world.beforeEvents.playerLeave.subscribe((e) => {
+      this._plrs = this._plrs.filter((p) => p.id !== e.player.id);
     });
   }
 }

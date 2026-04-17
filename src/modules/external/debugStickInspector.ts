@@ -1,27 +1,24 @@
 import { BlockRaycastHit, EntityRaycastHit, EquipmentSlot, Player, RawMessage, world } from "@minecraft/server";
-import { Manager } from "mc-bedrock-lib";
+import { Manager, PlayerManager } from "mc-bedrock-lib";
 
 /**
  * DebugStickInspector
  * Shows block/entity info in action bar when holding debug stick.
  */
 export class DebugStickInspector extends Manager {
-  private static readonly DEBUG_STICK_ID = "minecraft:debug_stick";
-  private static readonly MAX_DISTANCE = 7;
+  private playerManger!: PlayerManager;
 
+  protected _init(): void {
+    this.playerManger = new PlayerManager();
+  }
   protected async _main(): Promise<void> {
-    for (const player of world.getAllPlayers()) {
-      if (!this._hasDebugStick(player)) continue;
+    for (const player of this.playerManger.players) {
+      if (!(player.mainHandItem?.typeId === "minecraft:debug_stick")) continue;
 
       const target = this._getTarget(player);
       const text = this._getActionBarText(target);
       player.setActionBar(text);
     }
-  }
-
-  private _hasDebugStick(player: Player): boolean {
-    const mainhand = player.getEquipment(EquipmentSlot.Mainhand);
-    return mainhand?.typeId === DebugStickInspector.DEBUG_STICK_ID;
   }
 
   private _getTarget(player: Player): EntityRaycastHit | BlockRaycastHit | undefined {
@@ -35,7 +32,7 @@ export class DebugStickInspector extends Manager {
     return player.getBlockFromViewDirection({
       includeLiquidBlocks: true,
       includePassableBlocks: true,
-      maxDistance: DebugStickInspector.MAX_DISTANCE,
+      maxDistance: 7,
     });
   }
 

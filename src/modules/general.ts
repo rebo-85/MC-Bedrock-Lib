@@ -12,7 +12,7 @@ export class Vector2 {
     return `${this.x} ${this.y}`;
   }
 
-  offset(value: Vector2): Vector2 {
+  offset(value: Vector2 | { x: number; y: number }): Vector2 {
     return new Vector2(this.x + value.x, this.y + value.y);
   }
 
@@ -41,7 +41,7 @@ export class Vector3 extends Vector2 {
     this.z = z as number;
   }
 
-  override offset(value: Vector3) {
+  override offset(value: Vector3 | { x: number; y: number; z: number }): Vector3 {
     return new Vector3(this.x + value.x, this.y + value.y, this.z + value.z);
   }
 

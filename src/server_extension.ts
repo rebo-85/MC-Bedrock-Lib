@@ -363,6 +363,11 @@ defineProperties(Block.prototype, {
       return (this as Block).permutation.getAllStates();
     }
   },
+  withState: {
+    value: function (state: string, value: any): BlockPermutation {
+      return (this as Block).permutation.withState(state as any, value);
+    }
+  },
   setState: {
     value: function (state: string, value: any): void {
       const perm = (this as Block).permutation.withState(state as any, value);
@@ -1147,6 +1152,11 @@ defineProperties(Container.prototype, {
 // ============================================================================
 
 defineProperties(BlockPermutation.prototype, {
+  typeId: {
+    get: function (): string {
+      return (this as BlockPermutation).type.id;
+    }
+  },
   setState: {
     value: function (state: string, value: any): BlockPermutation {
       return (this as BlockPermutation).withState(state as any, value);

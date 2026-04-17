@@ -8,7 +8,7 @@ import {
   PlayerOnLandAfterEventSignal,
   PlayerOnEquipAfterEventSignal,
   PlayerOnUnequipAfterEventSignal,
-  PlayerXpOrbCollectAfterEventSignal,
+  PlayerXpOrbCollectAfterEventSignal
 } from "../modules/events";
 
 import { Vector2, Vector3 } from "../modules/general";
@@ -120,12 +120,7 @@ declare module "@minecraft/server" {
     /** The chunk position of the entity as a Vector3. */
     readonly chunk: Vector3;
     /** Adds an effect to the entity for a given duration and amplifier. */
-    effectAdd(
-      effectName: string,
-      durationInSeconds?: number | string,
-      amplifier?: number,
-      hideParticles?: boolean,
-    ): void;
+    effectAdd(effectName: string, durationInSeconds?: number | string, amplifier?: number, hideParticles?: boolean): void;
     /** Clears effects from the entity. If effectType is provided, only that effect is cleared. */
     effectClear(effectType?: string | null): void;
     /** Sends a Molang query to the entity. */
@@ -282,6 +277,8 @@ declare module "@minecraft/server" {
     getState(state: string): any;
     /** Sets the value of a specific block state. */
     setState(state: string, value: any): void;
+    /** Returns a new block permutation with the specified state value. */
+    withState(state: string, value: any): BlockPermutation;
     /** Returns an object containing all block states and their values. */
     getAllStates(): any;
     /** The inventory component for this block, if present. */
@@ -292,6 +289,8 @@ declare module "@minecraft/server" {
     getItems(typeId?: string): Map<number, ItemStack>;
   }
   interface BlockPermutation {
+    /** The type ID of the block this permutation represents. */
+    typeId: string;
     /** Sets the value of a specific permutation state and returns the updated permutation. */
     setState(state: string, value: any): BlockPermutation;
   }
