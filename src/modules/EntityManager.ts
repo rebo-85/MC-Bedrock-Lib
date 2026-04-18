@@ -8,25 +8,25 @@ import { Manager } from "./utils";
  */
 export class PlayerManager extends Manager {
   private _plrs: Player[] = [];
-  private _rdy = false;
+  private ready = false;
 
   get players(): Player[] {
     return createArrayProxy(
       () => this._plrs,
-      () => this._rdy
+      () => this.ready
     );
   }
 
-  protected _init(): void {
-    this._loadPlayers();
-    this._subscribeEvents();
+  protected init(): void {
+    this.loadPlayers();
+    this.subscribeEvents();
   }
 
-  private _loadPlayers(): void {
+  private loadPlayers(): void {
     const load = () => {
       try {
         this._plrs = world.getAllPlayers();
-        this._rdy = true;
+        this.ready = true;
       } catch {
         system.run(load);
       }
@@ -34,7 +34,7 @@ export class PlayerManager extends Manager {
     load();
   }
 
-  private _subscribeEvents(): void {
+  private subscribeEvents(): void {
     world.afterEvents.playerSpawn.subscribe((e) => {
       if (e.initialSpawn && !this._plrs.some((p) => p.id === e.player.id)) this._plrs.push(e.player);
     });
@@ -52,34 +52,34 @@ export class PlayerManager extends Manager {
 export class EntityManager extends Manager {
   private static readonly MATCH_DIST = 0.1;
 
-  private _ents: Entity[] = [];
-  private _rdy = false;
-  private _opts: EntityQueryOptions;
-  private _addCbs: ((entity: Entity) => void)[] = [];
-  private _rmvCbs: ((entityId: string) => void)[] = [];
+  private _entities: Entity[] = [];
+  private ready = false;
+  private options: EntityQueryOptions;
+  private addCbs: ((entity: Entity) => void)[] = [];
+  private removeCbs: ((entityId: string) => void)[] = [];
 
   constructor(opts: EntityQueryOptions = {}) {
     super();
-    this._opts = opts;
+    this.options = opts;
   }
 
   get entities(): any {
     return createArrayProxy(
-      () => this._ents,
-      () => this._rdy
+      () => this._entities,
+      () => this.ready
     );
   }
 
-  protected _init(): void {
-    this._loadEntities();
-    this._subscribeEvents();
+  protected init(): void {
+    this.loadEntities();
+    this.subscribeEvents();
   }
 
-  private _loadEntities(): void {
+  private loadEntities(): void {
     const load = () => {
       try {
-        this._ents = world.getEntities(this._opts);
-        this._rdy = true;
+        this._entities = world.getEntities(this.options);
+        this.ready = true;
       } catch {
         system.run(load);
       }
@@ -87,34 +87,34 @@ export class EntityManager extends Manager {
     load();
   }
 
-  private _subscribeEvents(): void {
+  private subscribeEvents(): void {
     world.afterEvents.entitySpawn.subscribe((e) => this._handleEntityAdd(e.entity));
     world.afterEvents.entityLoad.subscribe((e) => this._handleEntityAdd(e.entity));
     world.afterEvents.entityRemove.subscribe((e) => this._handleEntityRemove(e.removedEntityId));
   }
 
   private _handleEntityAdd(ent: Entity): void {
-    if (!this._isMatch(ent) || this._ents.some((e) => e.id === ent.id)) return;
+    if (!this._isMatch(ent) || this._entities.some((e) => e.id === ent.id)) return;
 
-    this._ents.push(ent);
-    this._addCbs.forEach((cb) => cb(ent));
+    this._entities.push(ent);
+    this.addCbs.forEach((cb) => cb(ent));
   }
 
   private _handleEntityRemove(entId: string): void {
-    this._ents = this._ents.filter((e) => e.id !== entId);
-    this._rmvCbs.forEach((cb) => cb(entId));
+    this._entities = this._entities.filter((e) => e.id !== entId);
+    this.removeCbs.forEach((cb) => cb(entId));
   }
 
   private _isMatch(ent: Entity): boolean {
-    const opts = { ...this._opts, location: ent.location, maxDistance: EntityManager.MATCH_DIST };
+    const opts = { ...this.options, location: ent.location, maxDistance: EntityManager.MATCH_DIST };
     return ent.dimension.getEntities(opts).length > 0;
   }
 
   onEntityAdd(cb: (entity: Entity) => void): void {
-    this._addCbs.push(cb);
+    this.addCbs.push(cb);
   }
 
   onEntityRemove(cb: (entityId: string) => void): void {
-    this._rmvCbs.push(cb);
+    this.removeCbs.push(cb);
   }
 }

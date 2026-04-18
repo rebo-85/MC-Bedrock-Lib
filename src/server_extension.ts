@@ -1,58 +1,59 @@
 import {
-  Dimension,
-  Entity,
-  BlockPermutation,
-  Player,
-  WorldAfterEvents,
-  EntityComponentTypes,
-  Container,
-  ItemStack,
-  World,
   Block,
-  ItemComponentTypes,
-  ScriptEventCommandMessageAfterEvent,
-  CustomCommandSource,
-  ScriptEventSource,
-  EquipmentSlot,
-  GameMode,
-  DimensionTypes,
   BlockComponentTypes,
+  BlockInventoryComponent,
+  BlockPermutation,
   BlockTypes,
-  WeatherType,
-  world,
-  InputPermissionCategory,
-  ItemEnchantableComponent,
+  Container,
+  CustomCommandOrigin,
+  CustomCommandSource,
+  Dimension,
+  DimensionTypes,
+  EaseOptions,
+  Enchantment,
   EnchantmentSlot,
   EnchantmentType,
-  Enchantment,
-  ItemDurabilityComponent,
-  EntityInventoryComponent,
-  BlockInventoryComponent,
-  EntityProjectileComponent,
-  EntityItemComponent,
-  EntityRidingComponent,
-  EntityMovementComponent,
-  EntityHealthComponent,
+  Entity,
+  EntityComponentTypes,
   EntityEquippableComponent,
+  EntityHealthComponent,
+  EntityInventoryComponent,
+  EntityItemComponent,
+  EntityMovementComponent,
+  EntityProjectileComponent,
+  EntityRidingComponent,
   EntityTameableComponent,
-  RawMessage,
   EntityTypeFamilyComponent,
-  CustomCommandOrigin,
+  EquipmentSlot,
+  GameMode,
   HudElement,
-  TitleDisplayOptions,
   HudVisibility,
-  EaseOptions
+  InputPermissionCategory,
+  ItemComponentTypes,
+  ItemDurabilityComponent,
+  ItemEnchantableComponent,
+  ItemInventoryComponent,
+  ItemStack,
+  Player,
+  RawMessage,
+  ScriptEventCommandMessageAfterEvent,
+  ScriptEventSource,
+  TitleDisplayOptions,
+  WeatherType,
+  World,
+  world,
+  WorldAfterEvents
 } from "@minecraft/server";
 import {
-  PlayerJumpAfterEventSignal,
-  PlayerStartJumpingAfterEventSignal,
-  PlayerStopJumpingAfterEventSignal,
+  EntityOnGroundAfterEventSignal,
+  EntitySneakAfterEventSignal,
   EntityUnsneakAfterEventSignal,
+  PlayerJumpAfterEventSignal,
   PlayerOnAirJumpAfterEventSignal,
   PlayerOnEquipAfterEventSignal,
   PlayerOnUnequipAfterEventSignal,
-  EntityOnGroundAfterEventSignal,
-  EntitySneakAfterEventSignal,
+  PlayerStartJumpingAfterEventSignal,
+  PlayerStopJumpingAfterEventSignal,
   PlayerXpOrbCollectAfterEventSignal
 } from "./modules/index";
 
@@ -67,6 +68,11 @@ import { WeatherOptions } from "interface";
 // ============================================================================
 
 defineProperties(WorldAfterEvents.prototype, {
+  entityOnGround: {
+    get: function (): EntityOnGroundAfterEventSignal {
+      return new EntityOnGroundAfterEventSignal();
+    }
+  },
   entitySneak: {
     get: function (): EntitySneakAfterEventSignal {
       return new EntitySneakAfterEventSignal();
@@ -77,9 +83,9 @@ defineProperties(WorldAfterEvents.prototype, {
       return new EntityUnsneakAfterEventSignal();
     }
   },
-  entityOnGround: {
-    get: function (): EntityOnGroundAfterEventSignal {
-      return new EntityOnGroundAfterEventSignal();
+  playerJump: {
+    get: function (): PlayerJumpAfterEventSignal {
+      return new PlayerJumpAfterEventSignal();
     }
   },
   playerOnAirJump: {
@@ -95,11 +101,6 @@ defineProperties(WorldAfterEvents.prototype, {
   playerOnUnequip: {
     get: function (): PlayerOnUnequipAfterEventSignal {
       return new PlayerOnUnequipAfterEventSignal();
-    }
-  },
-  playerJump: {
-    get: function (): PlayerJumpAfterEventSignal {
-      return new PlayerJumpAfterEventSignal();
     }
   },
   playerStartJumping: {
@@ -124,17 +125,6 @@ defineProperties(WorldAfterEvents.prototype, {
 // ============================================================================
 
 defineProperties(World.prototype, {
-  getEntities: {
-    value: function (selector?: any): Entity[] {
-      const entities = new Set<Entity>();
-      const dimTypes = DimensionTypes.getAll();
-      dimTypes.forEach((type: any) => {
-        const dim = (this as World).getDimension(type.typeId);
-        dim?.getEntities(selector).forEach((e: Entity) => entities.add(e));
-      });
-      return Array.from(entities);
-    }
-  },
   end: {
     get: createDimGetter("minecraft:the_end"),
     enumerable: true
@@ -159,6 +149,17 @@ defineProperties(World.prototype, {
       (this as World).setTimeOfDay(time);
     },
     enumerable: true
+  },
+  getEntities: {
+    value: function (selector?: any): Entity[] {
+      const entities = new Set<Entity>();
+      const dimTypes = DimensionTypes.getAll();
+      dimTypes.forEach((type: any) => {
+        const dim = (this as World).getDimension(type.typeId);
+        dim?.getEntities(selector).forEach((e: Entity) => entities.add(e));
+      });
+      return Array.from(entities);
+    }
   }
 });
 
@@ -167,15 +168,87 @@ defineProperties(World.prototype, {
 // ============================================================================
 
 defineProperties(ItemStack.prototype, {
-  // Enchantment methods
+  damage: {
+    get: function (): number {
+      return (this as ItemStack).durabilityComponent?.damage ?? 0;
+    },
+    set: function (dmg: number) {
+      const dc = (this as ItemStack).durabilityComponent;
+      if (!dc) return;
+      if (dmg < 0) {
+        dmg = 0;
+      } else if (dmg > (dc.maxDurability ?? 0)) {
+        dmg = dc.maxDurability ?? 0;
+      }
+      dc.damage = dmg;
+    },
+    enumerable: true
+  },
+  durability: {
+    get: function (): number {
+      if (!(this as ItemStack).durabilityComponent) return 0;
+
+      return (this as ItemStack).maxDurability - (this as ItemStack).damage;
+    },
+
+    set: function (dur: number) {
+      const dc = (this as ItemStack).durabilityComponent;
+      if (!dc) return;
+      let dmg = (dc.maxDurability ?? 0) - dur;
+      if (dmg < 0) {
+        dmg = 0;
+      } else if (dmg > (dc.maxDurability ?? 0)) {
+        dmg = dc.maxDurability ?? 0;
+      }
+      dc.damage = dmg;
+    },
+    enumerable: true
+  },
+  durabilityComponent: {
+    get: function (): ItemDurabilityComponent | undefined {
+      return (this as ItemStack).getComponent(ItemComponentTypes.Durability);
+    },
+    enumerable: true
+  },
+  enchantableComponent: {
+    get: function (): ItemEnchantableComponent | undefined {
+      return (this as ItemStack).getComponent(ItemComponentTypes.Enchantable);
+    },
+    enumerable: true
+  },
+  enchantmentSlots: {
+    get: function (): EnchantmentSlot[] | undefined {
+      return (this as ItemStack).enchantableComponent?.slots;
+    },
+    enumerable: true
+  },
+  inventory: {
+    get: function (): Container | undefined {
+      return (this as ItemStack).inventoryComponent?.container;
+    }
+  },
+  inventoryComponent: {
+    get: function (): ItemInventoryComponent | undefined {
+      return (this as ItemStack).getComponent(ItemComponentTypes.Inventory);
+    }
+  },
+  isVanillaBlock: {
+    get: function (): boolean {
+      return !!BlockTypes.get((this as ItemStack).typeId);
+    }
+  },
+  maxDurability: {
+    get: function (): number {
+      return (this as ItemStack).durabilityComponent?.maxDurability ?? 0;
+    },
+    enumerable: true
+  },
   addEnchantment: {
     value: function (...enchantments: Enchantment[]): void {
       const enchantmentList = enchantments.flat();
       enchantmentList.forEach((ench: any) => (this as ItemStack).enchantableComponent?.addEnchantments(ench));
     }
   },
-
-  // Comparison methods
   compare: {
     value: function (itemStack: ItemStack | null | undefined): boolean {
       if (itemStack === null || itemStack === undefined) return false;
@@ -199,67 +272,6 @@ defineProperties(ItemStack.prototype, {
       return false;
     }
   },
-
-  // Durability properties
-  damage: {
-    get: function (): number {
-      return (this as ItemStack).durabilityComponent?.damage ?? 0;
-    },
-    set: function (dmg: number) {
-      const dc = (this as ItemStack).durabilityComponent;
-      if (!dc) return;
-      if (dmg < 0) {
-        dmg = 0;
-      } else if (dmg > (dc.maxDurability ?? 0)) {
-        dmg = dc.maxDurability ?? 0;
-      }
-      dc.damage = dmg;
-    },
-    enumerable: true
-  },
-
-  durability: {
-    get: function (): number {
-      if (!(this as ItemStack).durabilityComponent) return 0;
-
-      return (this as ItemStack).maxDurability - (this as ItemStack).damage;
-    },
-
-    set: function (dur: number) {
-      const dc = (this as ItemStack).durabilityComponent;
-      if (!dc) return;
-      let dmg = (dc.maxDurability ?? 0) - dur;
-      if (dmg < 0) {
-        dmg = 0;
-      } else if (dmg > (dc.maxDurability ?? 0)) {
-        dmg = dc.maxDurability ?? 0;
-      }
-      dc.damage = dmg;
-    },
-    enumerable: true
-  },
-
-  // Component shortcuts
-  durabilityComponent: {
-    get: function (): ItemDurabilityComponent | undefined {
-      return (this as ItemStack).getComponent(ItemComponentTypes.Durability);
-    },
-    enumerable: true
-  },
-  enchantableComponent: {
-    get: function (): ItemEnchantableComponent | undefined {
-      return (this as ItemStack).getComponent(ItemComponentTypes.Enchantable);
-    },
-    enumerable: true
-  },
-  enchantmentSlots: {
-    get: function (): EnchantmentSlot[] | undefined {
-      return (this as ItemStack).enchantableComponent?.slots;
-    },
-    enumerable: true
-  },
-
-  // Enchantment getters
   getEnchantment: {
     value: function (enchantmentType: EnchantmentType): Enchantment | undefined {
       return (this as ItemStack).enchantableComponent?.getEnchantment(enchantmentType);
@@ -270,21 +282,6 @@ defineProperties(ItemStack.prototype, {
       return !!(this as ItemStack).enchantableComponent?.hasEnchantment(enchantmentType);
     }
   },
-
-  // Utility properties
-  isVanillaBlock: {
-    get: function (): boolean {
-      return !!BlockTypes.get((this as ItemStack).typeId);
-    }
-  },
-  maxDurability: {
-    get: function (): number {
-      return (this as ItemStack).durabilityComponent?.maxDurability ?? 0;
-    },
-    enumerable: true
-  },
-
-  // Enchantment removal
   removeAllEnchantments: {
     value: function (): void {
       return (this as ItemStack).enchantableComponent?.removeAllEnchantments();
@@ -302,7 +299,18 @@ defineProperties(ItemStack.prototype, {
 // ============================================================================
 
 defineProperties(Block.prototype, {
-  // Block query methods
+  inventory: {
+    get: function (): Container | undefined {
+      return (this as Block).inventoryComponent?.container;
+    },
+    enumerable: true
+  },
+  inventoryComponent: {
+    get: function (): BlockInventoryComponent | undefined {
+      return (this as Block).getComponent(BlockComponentTypes.Inventory);
+    },
+    enumerable: true
+  },
   getAdjacentBlocks: {
     value: function (): Block[] {
       const ofs = [
@@ -337,6 +345,11 @@ defineProperties(Block.prototype, {
       return ofs.map(([dx, dy, dz]) => (this as Block).offset(new Vector3(dx, dy, dz))).filter((b): b is Block => b !== undefined);
     }
   },
+  getAllStates: {
+    value: function (): any {
+      return (this as Block).permutation.getAllStates();
+    }
+  },
   getItems: {
     value: function (typeId?: string): Map<number, ItemStack> {
       const items = new Map<number, ItemStack>();
@@ -351,21 +364,9 @@ defineProperties(Block.prototype, {
       return items;
     }
   },
-
-  // Block state methods
   getState: {
     value: function (state: string): any {
       return (this as Block).permutation.getState(state as any);
-    }
-  },
-  getAllStates: {
-    value: function (): any {
-      return (this as Block).permutation.getAllStates();
-    }
-  },
-  withState: {
-    value: function (state: string, value: any): BlockPermutation {
-      return (this as Block).permutation.withState(state as any, value);
     }
   },
   setState: {
@@ -374,19 +375,10 @@ defineProperties(Block.prototype, {
       (this as Block).setPermutation(perm);
     }
   },
-
-  // Component shortcuts
-  inventory: {
-    get: function (): Container | undefined {
-      return (this as Block).inventoryComponent?.container;
-    },
-    enumerable: true
-  },
-  inventoryComponent: {
-    get: function (): BlockInventoryComponent | undefined {
-      return (this as Block).getComponent(BlockComponentTypes.Inventory);
-    },
-    enumerable: true
+  withState: {
+    value: function (state: string, value: any): BlockPermutation {
+      return (this as Block).permutation.withState(state as any, value);
+    }
   }
 });
 
@@ -395,69 +387,6 @@ defineProperties(Block.prototype, {
 // ============================================================================
 
 defineProperties(Player.prototype, {
-  // Inventory management
-  clearItem: {
-    value: function (typeId: string, maxCount: string = "", data: number = -1): void {
-      (this as Player).runCommand(`clear @s ${typeId} ${data} ${maxCount}`);
-    }
-  },
-
-  getItems: {
-    value: function (typeId?: string): { equipments: Map<string, ItemStack>; inventory: Map<number, ItemStack> } {
-      const eMap = new Map<string, ItemStack>();
-      const slots: string[] = Object.values(EquipmentSlot).filter((value) => typeof value === "string");
-      for (const slot of slots) {
-        const item = (this as Player).getEquipment(slot as EquipmentSlot);
-        if (item) {
-          if (typeId) {
-            if (item.typeId === typeId) eMap.set(slot, item);
-          } else eMap.set(slot, item);
-        }
-      }
-      const iMap = new Map<number, ItemStack>();
-      const inv = (this as Player).inventory;
-      for (let i = 0; i < inv.size; i++) {
-        const item = inv.getItem(i);
-        if (item) {
-          if (typeId) {
-            if (item.typeId === typeId) iMap.set(i, item);
-          } else iMap.set(i, item);
-        }
-      }
-      return { equipments: eMap, inventory: iMap };
-    }
-  },
-
-  damageItem: {
-    value: function (slot: EquipmentSlot, damage: number = 1, ignoreUnbreaking = false): ItemStack | undefined {
-      const eqSlot = (this as Player).equippableComponent?.getEquipmentSlot(slot);
-      const item = eqSlot?.getItem();
-      if (!item) return;
-
-      let shouldDamage = true;
-
-      if (!ignoreUnbreaking) {
-        const unbreaking = item.getEnchantment(new EnchantmentType("minecraft:unbreaking"));
-        const unbreakingLevel = unbreaking ? unbreaking.level : 0;
-        const unbreakingChance = 1 / (unbreakingLevel + 1);
-        shouldDamage = Math.random() < unbreakingChance;
-      }
-
-      if (shouldDamage) {
-        item.durability -= damage;
-        if (item.durability <= 0) {
-          eqSlot?.setItem(undefined);
-          (this as Player).dimension.playSound("random.break", (this as Player).location);
-        } else {
-          eqSlot?.setItem(item);
-        }
-      }
-
-      return item;
-    }
-  },
-
-  // Gamemode property
   gamemode: {
     get: function (): GameMode {
       return (this as Player).getGameMode();
@@ -488,14 +417,6 @@ defineProperties(Player.prototype, {
     },
     enumerable: true
   },
-
-  setFov: {
-    value: function (value: number, easeOption?: EaseOptions): void {
-      (this as Player).camera.setFov({ fov: value, easeOptions: easeOption });
-    }
-  },
-
-  // Input permissions
   ipCamera: {
     get: function (): boolean {
       return (this as Player).inputPermissions.isPermissionCategoryEnabled(InputPermissionCategory.Camera);
@@ -503,6 +424,17 @@ defineProperties(Player.prototype, {
     set: function (value: boolean) {
       (this as Player).inputPermissions.setPermissionCategory(InputPermissionCategory.Camera, value);
     }
+  },
+  isHudHidden: {
+    value: function (hudElement: HudElement): boolean {
+      return (this as Player).onScreenDisplay.isForcedHidden(hudElement);
+    }
+  },
+  isInvulnerable: {
+    get: function (): boolean {
+      return (this as Player).gamemode === GameMode.Creative || (this as Player).gamemode === GameMode.Spectator;
+    },
+    enumerable: true
   },
   ipMovement: {
     get: function (): boolean {
@@ -512,71 +444,12 @@ defineProperties(Player.prototype, {
       (this as Player).inputPermissions.setPermissionCategory(InputPermissionCategory.Movement, value);
     }
   },
-
-  // State properties
-  isInvulnerable: {
-    get: function (): boolean {
-      return (this as Player).gamemode === GameMode.Creative || (this as Player).gamemode === GameMode.Spectator;
-    },
-    enumerable: true
-  },
   isUsingItem: {
     get: function (): boolean {
       return playersUsingItem.has((this as Player).id);
     },
     enumerable: true
   },
-
-  // UI methods
-  setActionBar: {
-    value: function (rawMessage: string | RawMessage): void {
-      (this as Player).onScreenDisplay.setActionBar(rawMessage);
-    }
-  },
-  setTitle: {
-    value: function (rawMessage: string, option?: TitleDisplayOptions): void {
-      (this as Player).onScreenDisplay.setTitle(rawMessage, option);
-    }
-  },
-  updateSubtitle: {
-    value: function (rawMessage: string | RawMessage): void {
-      (this as Player).onScreenDisplay.updateSubtitle(rawMessage);
-    }
-  },
-  getHiddenHud: {
-    value: function (): HudElement[] {
-      return (this as Player).onScreenDisplay.getHiddenHudElements();
-    }
-  },
-  hideHudExcept: {
-    value: function (hudElements?: HudElement[]): void {
-      (this as Player).onScreenDisplay.hideAllExcept(hudElements);
-    }
-  },
-  resetHud: {
-    value: function (): void {
-      (this as Player).onScreenDisplay.resetHudElementsVisibility();
-    }
-  },
-  isHudHidden: {
-    value: function (hudElement: HudElement): boolean {
-      return (this as Player).onScreenDisplay.isForcedHidden(hudElement);
-    }
-  },
-  setHudVisibility: {
-    value: function (visible: HudVisibility, hudElements?: HudElement[]): void {
-      return (this as Player).onScreenDisplay.setHudVisibility(visible, hudElements);
-    }
-  },
-
-  // Audio methods
-  stopSound: {
-    value: function (id: string): void {
-      (this as Player).runCommand(`stopsound @s ${id}`);
-    }
-  },
-
-  // XP management
   xp: {
     get: function (): number {
       return (this as Player).getTotalXp();
@@ -630,6 +503,109 @@ defineProperties(Player.prototype, {
         player.addExperience(target.xpAtLevel);
       }
     }
+  },
+  clearItem: {
+    value: function (typeId: string, maxCount: string = "", data: number = -1): void {
+      (this as Player).runCommand(`clear @s ${typeId} ${data} ${maxCount}`);
+    }
+  },
+  damageItem: {
+    value: function (slot: EquipmentSlot, damage: number = 1, ignoreUnbreaking = false): ItemStack | undefined {
+      const eqSlot = (this as Player).equippableComponent?.getEquipmentSlot(slot);
+      const item = eqSlot?.getItem();
+      if (!item) return;
+
+      let shouldDamage = true;
+
+      if (!ignoreUnbreaking) {
+        const unbreaking = item.getEnchantment(new EnchantmentType("minecraft:unbreaking"));
+        const unbreakingLevel = unbreaking ? unbreaking.level : 0;
+        const unbreakingChance = 1 / (unbreakingLevel + 1);
+        shouldDamage = Math.random() < unbreakingChance;
+      }
+
+      if (shouldDamage) {
+        item.durability -= damage;
+        if (item.durability <= 0) {
+          eqSlot?.setItem(undefined);
+          (this as Player).dimension.playSound("random.break", (this as Player).location);
+        } else {
+          eqSlot?.setItem(item);
+        }
+      }
+
+      return item;
+    }
+  },
+  getItems: {
+    value: function (typeId?: string): { equipments: Map<string, ItemStack>; inventory: Map<number, ItemStack> } {
+      const eMap = new Map<string, ItemStack>();
+      const slots: string[] = Object.values(EquipmentSlot).filter((value) => typeof value === "string");
+      for (const slot of slots) {
+        const item = (this as Player).getEquipment(slot as EquipmentSlot);
+        if (item) {
+          if (typeId) {
+            if (item.typeId === typeId) eMap.set(slot, item);
+          } else eMap.set(slot, item);
+        }
+      }
+      const iMap = new Map<number, ItemStack>();
+      const inv = (this as Player).inventory;
+      for (let i = 0; i < inv.size; i++) {
+        const item = inv.getItem(i);
+        if (item) {
+          if (typeId) {
+            if (item.typeId === typeId) iMap.set(i, item);
+          } else iMap.set(i, item);
+        }
+      }
+      return { equipments: eMap, inventory: iMap };
+    }
+  },
+  getHiddenHud: {
+    value: function (): HudElement[] {
+      return (this as Player).onScreenDisplay.getHiddenHudElements();
+    }
+  },
+  hideHudExcept: {
+    value: function (hudElements?: HudElement[]): void {
+      (this as Player).onScreenDisplay.hideAllExcept(hudElements);
+    }
+  },
+  resetHud: {
+    value: function (): void {
+      (this as Player).onScreenDisplay.resetHudElementsVisibility();
+    }
+  },
+  setActionBar: {
+    value: function (rawMessage: string | RawMessage): void {
+      (this as Player).onScreenDisplay.setActionBar(rawMessage);
+    }
+  },
+  setFov: {
+    value: function (value: number, easeOption?: EaseOptions): void {
+      (this as Player).camera.setFov({ fov: value, easeOptions: easeOption });
+    }
+  },
+  setHudVisibility: {
+    value: function (visible: HudVisibility, hudElements?: HudElement[]): void {
+      return (this as Player).onScreenDisplay.setHudVisibility(visible, hudElements);
+    }
+  },
+  setTitle: {
+    value: function (rawMessage: string, option?: TitleDisplayOptions): void {
+      (this as Player).onScreenDisplay.setTitle(rawMessage, option);
+    }
+  },
+  updateSubtitle: {
+    value: function (rawMessage: string | RawMessage): void {
+      (this as Player).onScreenDisplay.updateSubtitle(rawMessage);
+    }
+  },
+  stopSound: {
+    value: function (id: string): void {
+      (this as Player).runCommand(`stopsound @s ${id}`);
+    }
   }
 });
 
@@ -638,273 +614,6 @@ defineProperties(Player.prototype, {
 // ============================================================================
 
 defineProperties(Entity.prototype, {
-  // Component shortcuts
-  equippableComponent: {
-    get: function (): EntityEquippableComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Equippable);
-    },
-    enumerable: true
-  },
-  healthComponent: {
-    get: function (): EntityHealthComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Health);
-    },
-    enumerable: true
-  },
-  inventoryComponent: {
-    get: function (): EntityInventoryComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Inventory);
-    },
-    enumerable: true
-  },
-  itemComponent: {
-    get: function (): EntityItemComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Item);
-    },
-    enumerable: true
-  },
-  movementComponent: {
-    get: function (): EntityMovementComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Movement);
-    },
-    enumerable: true
-  },
-  projectileComponent: {
-    get: function (): EntityProjectileComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Projectile);
-    },
-    enumerable: true
-  },
-  tameableComponent: {
-    get: function (): EntityTameableComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Tameable);
-    },
-    enumerable: true
-  },
-  typeFamilyComponent: {
-    get: function (): EntityTypeFamilyComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.TypeFamily);
-    },
-    enumerable: true
-  },
-  typeFamilies: {
-    get: function (): string[] {
-      return (this as Entity).typeFamilyComponent?.getTypeFamilies() ?? [];
-    }
-  },
-
-  // Inventory methods
-  addItem: {
-    value: function (itemStack: ItemStack): void {
-      (this as Entity).inventory?.addItem(itemStack);
-    }
-  },
-
-  // Location properties
-  chunk: {
-    get: function (): Vector3 {
-      return new Vector3(Math.floor((this as Entity).x / 16), Math.floor((this as Entity).y / 16), Math.floor((this as Entity).z / 16));
-    }
-  },
-
-  // Command methods
-  commandRun: {
-    value: function (...commands: (string | string[])[]): any {
-      let result = { successCount: 0 };
-
-      const flattenedCommands = commands.flat();
-
-      flattenedCommands.forEach((command) => {
-        const cr = (this as Entity).runCommand(command);
-        if (cr.successCount > 0) result.successCount++;
-      });
-      return result;
-    }
-  },
-
-  // Utility methods
-  dispose: {
-    value: function (): void {
-      (this as Entity).remove();
-    }
-  },
-
-  // Effect methods
-  effectAdd: {
-    value: function (effectName: string, durationInSeconds: number | string = 30, amplifier: number = 0, hideParticles: boolean = false): void {
-      (this as Entity).runCommand(`effect @s ${effectName} ${durationInSeconds} ${amplifier} ${hideParticles}`);
-    }
-  },
-  effectClear: {
-    value: function (effectType: string | null = null): void {
-      switch (typeof effectType) {
-        case "undefined":
-        case "object":
-          (this as Entity).runCommand("effect @s clear");
-          break;
-        case "string":
-          (this as Entity).runCommand(`effect @s ${effectType} 0`);
-          break;
-      }
-    }
-  },
-
-  // Equipment methods
-  getEquipment: {
-    value: function (slot: EquipmentSlot): ItemStack | undefined {
-      return (this as Entity).equippableComponent?.getEquipment(slot);
-    }
-  },
-  getFacingOffset: {
-    value: function (distance: number, offset: Vector3 = new Vector3(0, 0, 0)): Vector3 {
-      const view_dir = Vector3.extend((this as Entity).viewDirection);
-      const right_dir = new Vector3(-view_dir.z, 0, view_dir.x);
-      const normalized_right_dir = right_dir.normalized();
-      const end = {
-        x: view_dir.x * distance + normalized_right_dir.x * offset.x + offset.z,
-        y: view_dir.y * distance + offset.y,
-        z: view_dir.z * distance + normalized_right_dir.z * offset.x + offset.z
-      };
-      const headLoc = Vector3.extend((this as Entity).headLocation);
-      return headLoc.offset(Vector3.extend(end));
-    }
-  },
-
-  // Health properties
-  health: {
-    get: function (): number {
-      return (this as Entity).healthComponent?.currentValue || 0;
-    },
-    set: function (value: number) {
-      return (this as Entity).healthComponent?.setCurrentValue(value);
-    },
-    enumerable: true
-  },
-
-  // Head location shortcuts
-  hx: {
-    get: function (): number {
-      return (this as Entity).headLocation.x;
-    },
-    enumerable: true
-  },
-  hy: {
-    get: function (): number {
-      return (this as Entity).headLocation.y;
-    },
-    enumerable: true
-  },
-  hz: {
-    get: function (): number {
-      return (this as Entity).headLocation.z;
-    },
-    enumerable: true
-  },
-
-  // Inventory shortcuts
-  inventory: {
-    get: function (): Container | undefined {
-      return (this as Entity).inventoryComponent?.container;
-    },
-    enumerable: true
-  },
-
-  // State checks
-  isPlayer: {
-    get: function (): boolean {
-      return (this as Entity).typeId === "minecraft:player";
-    },
-    enumerable: true
-  },
-  isRiding: {
-    get: function (): boolean {
-      return (this as Entity).ridingComponent ? true : false;
-    },
-    enumerable: true
-  },
-
-  // Health shortcuts
-  maxHealth: {
-    get: function (): number {
-      return (this as Entity).healthComponent?.effectiveMax || 0;
-    },
-    enumerable: true
-  },
-  missingHealth: {
-    get: function (): number {
-      return (this as Entity).maxHealth - (this as Entity).health;
-    },
-    enumerable: true
-  },
-
-  // Projectile properties
-  projectileOwner: {
-    get: function (): Entity | undefined {
-      return (this as Entity).projectileComponent?.owner;
-    },
-    set: function (entity: Entity) {
-      const comp = (this as Entity).projectileComponent;
-      if (comp) comp.owner = entity;
-    }
-  },
-
-  // Riding properties
-  ride: {
-    get: function (): Entity | undefined {
-      return (this as Entity).ridingComponent?.entityRidingOn;
-    },
-    enumerable: true
-  },
-  ridingComponent: {
-    get: function (): EntityRidingComponent | undefined {
-      return (this as Entity).getComponent(EntityComponentTypes.Riding);
-    },
-    enumerable: true
-  },
-
-  // Rotation property
-  rotation: {
-    get: function (): Vector2 {
-      return Vector2.extend((this as Entity).getRotation());
-    },
-    set: function (rotation: Vector2) {
-      (this as Entity).setRotation(rotation);
-    },
-    enumerable: true
-  },
-
-  // Equipment setters
-  setEquipment: {
-    value: function (slot: EquipmentSlot, item: ItemStack): boolean | undefined {
-      return (this as Entity).equippableComponent?.setEquipment(slot, item);
-    }
-  },
-
-  // Equipment slot shortcuts
-  mainHandItem: {
-    get: function (): ItemStack | undefined {
-      return (this as Entity).getEquipment?.(EquipmentSlot.Mainhand);
-    },
-    set: function (item: ItemStack | undefined) {
-      (this as Entity).setEquipment?.(EquipmentSlot.Mainhand, item as any);
-    }
-  },
-  offhandItem: {
-    get: function (): ItemStack | undefined {
-      return (this as Entity).getEquipment?.(EquipmentSlot.Offhand);
-    },
-    set: function (item: ItemStack | undefined) {
-      (this as Entity).setEquipment?.(EquipmentSlot.Offhand, item as any);
-    }
-  },
-  headItem: {
-    get: function (): ItemStack | undefined {
-      return (this as Entity).getEquipment?.(EquipmentSlot.Head);
-    },
-    set: function (item: ItemStack | undefined) {
-      (this as Entity).setEquipment?.(EquipmentSlot.Head, item as any);
-    }
-  },
   chestItem: {
     get: function (): ItemStack | undefined {
       return (this as Entity).getEquipment?.(EquipmentSlot.Chest);
@@ -913,66 +622,11 @@ defineProperties(Entity.prototype, {
       (this as Entity).setEquipment?.(EquipmentSlot.Chest, item as any);
     }
   },
-  legsItem: {
-    get: function (): ItemStack | undefined {
-      return (this as Entity).getEquipment?.(EquipmentSlot.Legs);
-    },
-    set: function (item: ItemStack | undefined) {
-      (this as Entity).setEquipment?.(EquipmentSlot.Legs, item as any);
-    }
-  },
-  feetItem: {
-    get: function (): ItemStack | undefined {
-      return (this as Entity).getEquipment?.(EquipmentSlot.Feet);
-    },
-    set: function (item: ItemStack | undefined) {
-      (this as Entity).setEquipment?.(EquipmentSlot.Feet, item as any);
-    }
-  },
-
-  // Speed property
-  speed: {
-    get: function (): number {
-      return (this as Entity).movementComponent?.currentValue ?? 0;
-    },
-    set: function (value: number) {
-      return (this as Entity).movementComponent?.setCurrentValue(value);
-    },
-    enumerable: true
-  },
-
-  // Taming properties
-  tameOwner: {
-    get: function (): Entity | undefined {
-      return (this as Entity).tameableComponent?.tamedToPlayer;
-    },
-    set: function (player: Player) {
-      return (this as Entity).tameableComponent?.tame(player);
-    }
-  },
-
-  // Conversion methods
-  toItemStack: {
-    value: function (): ItemStack | undefined {
-      return (this as Entity).itemComponent?.itemStack;
-    }
-  },
-
-  // Vector properties
-  velocity: {
+  chunk: {
     get: function (): Vector3 {
-      return Vector3.extend((this as Entity).getVelocity());
-    },
-    enumerable: true
+      return new Vector3(Math.floor((this as Entity).x / 16), Math.floor((this as Entity).y / 16), Math.floor((this as Entity).z / 16));
+    }
   },
-  viewDirection: {
-    get: function (): Vector3 {
-      return Vector3.extend((this as Entity).getViewDirection());
-    },
-    enumerable: true
-  },
-
-  // Coordinate shortcuts
   coordinates: {
     get: function (): Vector3 {
       return new Vector3(Math.floor((this as Entity).x), Math.floor((this as Entity).y), Math.floor((this as Entity).z));
@@ -997,57 +651,181 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true
   },
-
-  // Location axis shortcuts
+  equippableComponent: {
+    get: function (): EntityEquippableComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Equippable);
+    },
+    enumerable: true
+  },
+  feetItem: {
+    get: function (): ItemStack | undefined {
+      return (this as Entity).getEquipment?.(EquipmentSlot.Feet);
+    },
+    set: function (item: ItemStack | undefined) {
+      (this as Entity).setEquipment?.(EquipmentSlot.Feet, item as any);
+    }
+  },
+  headItem: {
+    get: function (): ItemStack | undefined {
+      return (this as Entity).getEquipment?.(EquipmentSlot.Head);
+    },
+    set: function (item: ItemStack | undefined) {
+      (this as Entity).setEquipment?.(EquipmentSlot.Head, item as any);
+    }
+  },
   headLocation: {
     get: function (): Vector3 {
       return Vector3.extend((this as Entity).getHeadLocation());
     },
     enumerable: true
   },
-  x: {
+  health: {
     get: function (): number {
-      return (this as Entity).location.x;
+      return (this as Entity).healthComponent?.currentValue || 0;
     },
-    set: function (x: number) {
-      const location = (this as Entity).location;
-      location.x = x;
-      (this as Entity).teleport(location);
+    set: function (value: number) {
+      return (this as Entity).healthComponent?.setCurrentValue(value);
     },
     enumerable: true
   },
-  y: {
-    get: function (): number {
-      return (this as Entity).location.y;
-    },
-    set: function (y: number) {
-      const location = (this as Entity).location;
-      location.y = y;
-      (this as Entity).teleport(location);
+  healthComponent: {
+    get: function (): EntityHealthComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Health);
     },
     enumerable: true
   },
-  z: {
+  hx: {
     get: function (): number {
-      return (this as Entity).location.z;
-    },
-    set: function (z: number) {
-      const location = (this as Entity).location;
-      location.z = z;
-      (this as Entity).teleport(location);
+      return (this as Entity).headLocation.x;
     },
     enumerable: true
   },
-
-  // Rotation axis shortcuts
+  hy: {
+    get: function (): number {
+      return (this as Entity).headLocation.y;
+    },
+    enumerable: true
+  },
+  hz: {
+    get: function (): number {
+      return (this as Entity).headLocation.z;
+    },
+    enumerable: true
+  },
+  inventory: {
+    get: function (): Container | undefined {
+      return (this as Entity).inventoryComponent?.container;
+    },
+    enumerable: true
+  },
+  inventoryComponent: {
+    get: function (): EntityInventoryComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Inventory);
+    },
+    enumerable: true
+  },
+  isPlayer: {
+    get: function (): boolean {
+      return (this as Entity).typeId === "minecraft:player";
+    },
+    enumerable: true
+  },
+  isRiding: {
+    get: function (): boolean {
+      return (this as Entity).ridingComponent ? true : false;
+    },
+    enumerable: true
+  },
+  itemComponent: {
+    get: function (): EntityItemComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Item);
+    },
+    enumerable: true
+  },
+  legsItem: {
+    get: function (): ItemStack | undefined {
+      return (this as Entity).getEquipment?.(EquipmentSlot.Legs);
+    },
+    set: function (item: ItemStack | undefined) {
+      (this as Entity).setEquipment?.(EquipmentSlot.Legs, item as any);
+    }
+  },
+  mainHandItem: {
+    get: function (): ItemStack | undefined {
+      return (this as Entity).getEquipment?.(EquipmentSlot.Mainhand);
+    },
+    set: function (item: ItemStack | undefined) {
+      (this as Entity).setEquipment?.(EquipmentSlot.Mainhand, item as any);
+    }
+  },
+  maxHealth: {
+    get: function (): number {
+      return (this as Entity).healthComponent?.effectiveMax || 0;
+    },
+    enumerable: true
+  },
+  missingHealth: {
+    get: function (): number {
+      return (this as Entity).maxHealth - (this as Entity).health;
+    },
+    enumerable: true
+  },
+  movementComponent: {
+    get: function (): EntityMovementComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Movement);
+    },
+    enumerable: true
+  },
+  offhandItem: {
+    get: function (): ItemStack | undefined {
+      return (this as Entity).getEquipment?.(EquipmentSlot.Offhand);
+    },
+    set: function (item: ItemStack | undefined) {
+      (this as Entity).setEquipment?.(EquipmentSlot.Offhand, item as any);
+    }
+  },
+  projectileComponent: {
+    get: function (): EntityProjectileComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Projectile);
+    },
+    enumerable: true
+  },
+  projectileOwner: {
+    get: function (): Entity | undefined {
+      return (this as Entity).projectileComponent?.owner;
+    },
+    set: function (entity: Entity) {
+      const comp = (this as Entity).projectileComponent;
+      if (comp) comp.owner = entity;
+    }
+  },
+  ride: {
+    get: function (): Entity | undefined {
+      return (this as Entity).ridingComponent?.entityRidingOn;
+    },
+    enumerable: true
+  },
+  ridingComponent: {
+    get: function (): EntityRidingComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Riding);
+    },
+    enumerable: true
+  },
+  rotation: {
+    get: function (): Vector2 {
+      return Vector2.extend((this as Entity).getRotation());
+    },
+    set: function (rotation: Vector2) {
+      (this as Entity).setRotation(rotation);
+    },
+    enumerable: true
+  },
   rx: {
     get: function (): number {
       return (this as Entity).rotation.x;
     },
-    set: function (rx: number) {
-      const rotation = (this as Entity).rotation;
-      rotation.x = rx;
-      (this as Entity).setRotation(rotation);
+    set: function (value: number) {
+      (this as Entity).rotation.x = value;
     },
     enumerable: true
   },
@@ -1055,15 +833,75 @@ defineProperties(Entity.prototype, {
     get: function (): number {
       return (this as Entity).rotation.y;
     },
-    set: function (ry: number) {
-      const rotation = (this as Entity).rotation;
-      rotation.y = ry;
-      (this as Entity).setRotation(rotation);
+    set: function (value: number) {
+      (this as Entity).rotation.y = value;
     },
     enumerable: true
   },
-
-  // Velocity axis shortcuts
+  speed: {
+    get: function (): number {
+      return (this as Entity).movementComponent?.currentValue ?? 0;
+    },
+    set: function (value: number) {
+      return (this as Entity).movementComponent?.setCurrentValue(value);
+    },
+    enumerable: true
+  },
+  tameableComponent: {
+    get: function (): EntityTameableComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.Tameable);
+    },
+    enumerable: true
+  },
+  tameOwner: {
+    get: function (): Entity | undefined {
+      return (this as Entity).tameableComponent?.tamedToPlayer;
+    },
+    set: function (player: Player) {
+      return (this as Entity).tameableComponent?.tame(player);
+    }
+  },
+  typeFamilies: {
+    get: function (): string[] {
+      return (this as Entity).typeFamilyComponent?.getTypeFamilies() ?? [];
+    }
+  },
+  typeFamilyComponent: {
+    get: function (): EntityTypeFamilyComponent | undefined {
+      return (this as Entity).getComponent(EntityComponentTypes.TypeFamily);
+    },
+    enumerable: true
+  },
+  vdx: {
+    get: function (): number {
+      return (this as Entity).viewDirection.x;
+    },
+    enumerable: true
+  },
+  vdy: {
+    get: function (): number {
+      return (this as Entity).viewDirection.y;
+    },
+    enumerable: true
+  },
+  vdz: {
+    get: function (): number {
+      return (this as Entity).viewDirection.z;
+    },
+    enumerable: true
+  },
+  velocity: {
+    get: function (): Vector3 {
+      return Vector3.extend((this as Entity).getVelocity());
+    },
+    enumerable: true
+  },
+  viewDirection: {
+    get: function (): Vector3 {
+      return Vector3.extend((this as Entity).getViewDirection());
+    },
+    enumerable: true
+  },
   vx: {
     get: function (): number {
       return (this as Entity).velocity.x;
@@ -1082,25 +920,75 @@ defineProperties(Entity.prototype, {
     },
     enumerable: true
   },
+  addItem: {
+    value: function (itemStack: ItemStack): ItemStack | undefined {
+      return (this as Entity).inventoryComponent?.container.addItem(itemStack);
+    }
+  },
+  commandRun: {
+    value: function (...commands: (string | string[])[]): any {
+      let result = { successCount: 0 };
 
-  // View direction axis shortcuts
-  vdx: {
-    get: function (): number {
-      return (this as Entity).viewDirection.x;
-    },
-    enumerable: true
+      const flattenedCommands = commands.flat();
+
+      flattenedCommands.forEach((command) => {
+        const cr = (this as Entity).runCommand(command);
+        if (cr.successCount > 0) result.successCount++;
+      });
+      return result;
+    }
   },
-  vdy: {
-    get: function (): number {
-      return (this as Entity).viewDirection.y;
-    },
-    enumerable: true
+  dispose: {
+    value: function (): void {
+      (this as Entity).remove();
+    }
   },
-  vdz: {
-    get: function (): number {
-      return (this as Entity).viewDirection.z;
-    },
-    enumerable: true
+  effectAdd: {
+    value: function (effectName: string, durationInSeconds: number | string = 30, amplifier: number = 0, hideParticles: boolean = false): void {
+      (this as Entity).runCommand(`effect @s ${effectName} ${durationInSeconds} ${amplifier} ${hideParticles}`);
+    }
+  },
+  effectClear: {
+    value: function (effectType: string | null = null): void {
+      switch (typeof effectType) {
+        case "undefined":
+        case "object":
+          (this as Entity).runCommand("effect @s clear");
+          break;
+        case "string":
+          (this as Entity).runCommand(`effect @s ${effectType} 0`);
+          break;
+      }
+    }
+  },
+  getEquipment: {
+    value: function (slot: EquipmentSlot): ItemStack | undefined {
+      return (this as Entity).equippableComponent?.getEquipment(slot);
+    }
+  },
+  getFacingOffset: {
+    value: function (distance: number, offset: Vector3 = new Vector3(0, 0, 0)): Vector3 {
+      const view_dir = Vector3.extend((this as Entity).viewDirection);
+      const right_dir = new Vector3(-view_dir.z, 0, view_dir.x);
+      const normalized_right_dir = right_dir.normalized();
+      const end = {
+        x: view_dir.x * distance + normalized_right_dir.x * offset.x + offset.z,
+        y: view_dir.y * distance + offset.y,
+        z: view_dir.z * distance + normalized_right_dir.z * offset.x + offset.z
+      };
+      const headLoc = Vector3.extend((this as Entity).headLocation);
+      return headLoc.offset(Vector3.extend(end));
+    }
+  },
+  setEquipment: {
+    value: function (slot: EquipmentSlot, item: ItemStack): boolean | undefined {
+      return (this as Entity).equippableComponent?.setEquipment(slot, item);
+    }
+  },
+  toItemStack: {
+    value: function (): ItemStack | undefined {
+      return (this as Entity).itemComponent?.itemStack;
+    }
   }
 });
 
@@ -1125,6 +1013,32 @@ defineProperties(Container.prototype, {
         if (item) items.set(id, item);
       });
       return items;
+    }
+  },
+  transferAll: {
+    value: function (to: Container): number {
+      const from = this as Container;
+      if (!to) return 0;
+
+      let movedStacks = 0;
+
+      for (let i = 0; i < from.size; i++) {
+        const srcItem = from.getItem(i);
+        if (!srcItem) continue;
+
+        // Use the built-in transferItem which returns leftover when destination is full
+        const leftover = from.transferItem(i, to);
+
+        if (!leftover) {
+          // fully moved
+          movedStacks++;
+        } else {
+          // put leftover back into the same slot
+          from.setItem(i, leftover);
+        }
+      }
+
+      return movedStacks;
     }
   },
   sort: {
@@ -1214,19 +1128,6 @@ defineProperties(CustomCommandOrigin.prototype, {
 // ============================================================================
 
 defineProperties(Dimension.prototype, {
-  commandRun: {
-    value: function (...commands: (string | string[])[]): any {
-      let result = { successCount: 0 };
-
-      const flattenedCommands = commands.flat();
-
-      flattenedCommands.forEach((command) => {
-        const cr = (this as Dimension).runCommand(command);
-        if (cr.successCount > 0) result.successCount++;
-      });
-      return result;
-    }
-  },
   weather: {
     get: function (): WeatherType | undefined {
       // get current weather
@@ -1244,6 +1145,19 @@ defineProperties(Dimension.prototype, {
     },
     set: function (v: WeatherOptions) {
       (this as Dimension).setWeather(v.type, v.duration);
+    }
+  },
+  commandRun: {
+    value: function (...commands: (string | string[])[]): any {
+      let result = { successCount: 0 };
+
+      const flattenedCommands = commands.flat();
+
+      flattenedCommands.forEach((command) => {
+        const cr = (this as Dimension).runCommand(command);
+        if (cr.successCount > 0) result.successCount++;
+      });
+      return result;
     }
   }
 });

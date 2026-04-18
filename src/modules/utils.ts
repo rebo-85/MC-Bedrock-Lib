@@ -1,16 +1,16 @@
 import { system } from "@minecraft/server";
 
 export class Run {
-  protected _id?: number;
+  protected id?: number;
 
   constructor(cb: () => void) {
-    this._id = system.run(cb);
+    this.id = system.run(cb);
   }
 
   dispose() {
-    if (this._id !== undefined) {
-      system.clearRun(this._id);
-      this._id = undefined;
+    if (this.id !== undefined) {
+      system.clearRun(this.id);
+      this.id = undefined;
     }
   }
 
@@ -24,69 +24,69 @@ export class Run {
 }
 
 export class RunInterval {
-  private _id?: number;
+  private id?: number;
 
   constructor(cb: () => void, tickInterval = 1) {
-    this._id = system.runInterval(cb, tickInterval);
+    this.id = system.runInterval(cb, tickInterval);
   }
 
   dispose() {
-    if (this._id !== undefined) {
-      system.clearRun(this._id);
-      this._id = undefined;
+    if (this.id !== undefined) {
+      system.clearRun(this.id);
+      this.id = undefined;
     }
   }
 }
 
 export class RunTimeout {
-  private _id?: number;
+  private id?: number;
 
   constructor(cb: () => void, delay = 1) {
-    this._id = system.runTimeout(cb, delay);
+    this.id = system.runTimeout(cb, delay);
   }
 
   dispose() {
-    if (this._id !== undefined) {
-      system.clearRun(this._id);
-      this._id = undefined;
+    if (this.id !== undefined) {
+      system.clearRun(this.id);
+      this.id = undefined;
     }
   }
 }
 
 export class Manager {
-  private _id?: number;
-  private _disposed = false;
-  private _interval: number;
+  private id?: number;
+  private disposed = false;
+  private interval: number;
 
   constructor(interval = 1) {
-    this._interval = interval;
-    this._init();
-    this._loop();
+    this.interval = interval;
+    this.init();
+    this.loop();
   }
 
-  private _loop() {
+  private loop() {
     const tick = () => {
-      Promise.resolve(this._main())
+      Promise.resolve(this.main())
         .catch(console.error)
         .finally(() => {
-          if (!this._disposed) {
-            this._id = system.runTimeout(tick, this._interval);
+          if (!this.disposed) {
+            this.id = system.runTimeout(tick, this.interval);
           }
         });
     };
 
-    this._id = system.runTimeout(tick, this._interval);
+    this.id = system.runTimeout(tick, this.interval);
   }
 
-  protected _init(): void {}
-  protected async _main(): Promise<void> {}
+  protected init(): void {}
+  protected async main(): Promise<void> {}
 
   dispose() {
-    this._disposed = true;
+    this.disposed = true;
 
-    if (this._id !== undefined) {
-      system.clearRun(this._id);
-      this._id = undefined;
+    if (this.id !== undefined) {
+      system.clearRun(this.id);
+      this.id = undefined;
     }
   }
 }

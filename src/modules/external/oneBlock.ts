@@ -51,7 +51,7 @@ export class OneBlock extends Manager {
     "structure_block",
     "structure_void",
     "unknown",
-    "vine",
+    "vine"
   ];
 
   private static readonly NO_COLLISION_BLOCKS = [
@@ -113,10 +113,10 @@ export class OneBlock extends Manager {
     "warped_roots",
     "web",
     "wheat",
-    "wither_rose",
+    "wither_rose"
   ];
 
-  async _init(): Promise<void> {
+  async init(): Promise<void> {
     this._dimension = world.overworld;
     this._mobList = EntityTypes.getAll()
       .filter((e) => e.id.startsWith("minecraft:"))
@@ -126,7 +126,7 @@ export class OneBlock extends Manager {
     this._ready = true;
   }
 
-  protected async _main(): Promise<void> {
+  protected async main(): Promise<void> {
     if (!this._ready) return;
 
     const block = this._dimension.getBlock(this.location);

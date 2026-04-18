@@ -16,7 +16,7 @@ class DynamicLight extends Manager {
     super();
   }
 
-  protected _init(): void {
+  protected init(): void {
     this.active = new Map<string, Block>();
     this.playerManager = new PlayerManager();
     this.attachListeners();
@@ -36,7 +36,7 @@ class DynamicLight extends Manager {
     world.beforeEvents.playerLeave.subscribe(({ player }) => new Run(() => this.off(player)));
   }
 
-  protected async _main(): Promise<void> {
+  protected async main(): Promise<void> {
     for (const player of this.playerManager.players as Player[]) {
       const info = this.getLightInfo(player);
       if (info) this.on(player, info.level);

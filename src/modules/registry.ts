@@ -6,7 +6,7 @@ import {
   CustomCommandOrigin,
   CustomCommandResult,
   StartupBeforeEventSignal,
-  system,
+  system
 } from "@minecraft/server";
 
 class Registry<key, value> {
@@ -46,20 +46,17 @@ export class ItemRegistry extends Registry<string, ItemCustomComponent> {
   }
 }
 
-export class CommandRegistry extends Registry<
-  CustomCommand,
-  (origin: CustomCommandOrigin, ...args: any[]) => CustomCommandResult | undefined
-> {
-  private _enums: Map<string, string[]> = new Map();
+export class CommandRegistry extends Registry<CustomCommand, (origin: CustomCommandOrigin, ...args: any[]) => CustomCommandResult | undefined> {
+  private enums: Map<string, string[]> = new Map();
   constructor() {
     super();
     this.startup.subscribe((e) => {
-      for (const [name, values] of this._enums) e.customCommandRegistry.registerEnum(name, values);
+      for (const [name, values] of this.enums) e.customCommandRegistry.registerEnum(name, values);
       for (const [def, cb] of this.registry) e.customCommandRegistry.registerCommand(def, cb);
     });
   }
   addEnum(name: string, values: string[]) {
     if (!name || !Array.isArray(values) || !values.length) return;
-    this._enums.set(name, values);
+    this.enums.set(name, values);
   }
 }
