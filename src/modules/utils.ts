@@ -21,6 +21,10 @@ export class Run {
   static timeout(cb: () => void, delay = 1) {
     return new RunTimeout(cb, delay);
   }
+
+  static job(gen: Generator<void, void, void>) {
+    return new RunJob(gen);
+  }
 }
 
 export class RunInterval {
@@ -48,6 +52,21 @@ export class RunTimeout {
   dispose() {
     if (this.id !== undefined) {
       system.clearRun(this.id);
+      this.id = undefined;
+    }
+  }
+}
+
+export class RunJob {
+  private id?: number;
+
+  constructor(gen: Generator<void, void, void>) {
+    this.id = system.runJob(gen);
+  }
+
+  dispose() {
+    if (this.id !== undefined) {
+      system.clearJob(this.id);
       this.id = undefined;
     }
   }

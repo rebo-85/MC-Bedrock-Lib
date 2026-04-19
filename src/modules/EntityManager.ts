@@ -7,12 +7,12 @@ import { Manager } from "./utils";
  * Tracks all players in the world, updates on spawn/leave events.
  */
 export class PlayerManager extends Manager {
-  private _plrs: Player[] = [];
+  private _players: Player[] = [];
   private ready = false;
 
   get players(): Player[] {
     return createArrayProxy(
-      () => this._plrs,
+      () => this._players,
       () => this.ready
     );
   }
@@ -25,7 +25,7 @@ export class PlayerManager extends Manager {
   private loadPlayers(): void {
     const load = () => {
       try {
-        this._plrs = world.getAllPlayers();
+        this._players = world.getAllPlayers();
         this.ready = true;
       } catch {
         system.run(load);
@@ -36,11 +36,11 @@ export class PlayerManager extends Manager {
 
   private subscribeEvents(): void {
     world.afterEvents.playerSpawn.subscribe((e) => {
-      if (e.initialSpawn && !this._plrs.some((p) => p.id === e.player.id)) this._plrs.push(e.player);
+      if (e.initialSpawn && !this._players.some((p) => p.id === e.player.id)) this._players.push(e.player);
     });
 
     world.beforeEvents.playerLeave.subscribe((e) => {
-      this._plrs = this._plrs.filter((p) => p.id !== e.player.id);
+      this._players = this._players.filter((p) => p.id !== e.player.id);
     });
   }
 }
