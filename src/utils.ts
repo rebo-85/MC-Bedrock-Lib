@@ -1,4 +1,5 @@
 import { system, World, world } from "@minecraft/server";
+import type { Vector3 } from "@minecraft/server";
 
 export function tillWorldLoad(): Promise<void> {
   return new Promise((resolve) => {
@@ -43,7 +44,7 @@ export function createDimGetter(dimId: string) {
             };
           }
           throw err;
-        },
+        }
       };
       return new Proxy({}, handler);
     }
@@ -97,11 +98,11 @@ export function createPlayersGetter() {
                   chk();
                 });
                 return p.then(onRes, onRej);
-              },
+              }
             };
           }
           throw err;
-        },
+        }
       };
       return new Proxy({}, handler);
     }
@@ -139,11 +140,11 @@ export function createArrayProxy<T>(getArr: () => T[], getRdy: () => boolean): a
               system.run(chk);
             });
             return p.then(onRes, onRej);
-          },
+          }
         };
       }
       throw err;
-    },
+    }
   };
   return new Proxy({}, handler);
 }
@@ -226,4 +227,11 @@ export function lerp(a: number, b: number, t: number): number {
 export function toCommandDecimal(val: number) {
   const n = Number(val);
   return n % 1 === 0 ? n.toFixed(1) : n.toFixed(16);
+}
+
+export function hashVector3(pos: Vector3): number {
+  const x = pos.x | 0;
+  const y = pos.y | 0;
+  const z = pos.z | 0;
+  return ((x * 73856093) ^ (y * 19349663) ^ (z * 83492791)) >>> 0;
 }

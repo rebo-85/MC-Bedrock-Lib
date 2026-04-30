@@ -11,7 +11,7 @@ This is a **prototype extension library** for Minecraft Bedrock Edition Scriptin
 - `src/index.ts` - Main entry point that exports and applies all extensions
 - `src/server_extension.ts` - Prototype extensions for Minecraft classes (Player, Entity, World, Block, ItemStack, etc.)
 - `src/js_extension.ts` - Prototype extensions for JavaScript natives (String, Math, Map)
-- `src/modules/` - Utility classes (Vector2, Vector3) and custom event systems
+- `src/modules/` - Utility classes (V2, V3) and custom event systems
 - `src/modules/external/` - Example implementations (countdown timer, scene player, etc.)
 - `src/types/index.d.ts` - Type definitions for all prototype extensions
 - `scripts/patch-dts.js` - Post-build script that merges type definitions into the bundle
@@ -38,13 +38,13 @@ defineProperties(Player.prototype, {
     set: function (gm: GameMode) {
       (this as Player).setGameMode(gm);
     },
-    enumerable: true,
+    enumerable: true
   },
   setMainhand: {
     value: function (item: ItemStack) {
       this.setEquipment?.(EquipmentSlot.Mainhand, item);
-    },
-  },
+    }
+  }
 });
 ```
 
@@ -88,9 +88,9 @@ When adding new events:
 
 String prototype extensions enable command-style parsing:
 
-- `"10 64 10".toVector3()` → `Vector3`
+- `"10 64 10".toV3()` → `V3`
 - `"@a[tag=admin]".toEQO()` → `EntityQueryOptions`
-- `"north".toVector2()` → rotation Vector2
+- `"north".toV2()` → rotation V2
 
 Use these for config parsing and user input handling.
 

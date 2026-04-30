@@ -8,17 +8,29 @@ import {
   SystemAfterEvents,
   SystemBeforeEvents
 } from "@minecraft/server";
-import { BlockRegistry, CommandRegistry, ItemRegistry, Vector2 } from "modules";
-export const Direction = {
-  South: new Vector2(0, 0),
-  West: new Vector2(0, 90),
-  North: new Vector2(0, 180),
-  East: new Vector2(0, -90),
-  NorthEast: new Vector2(0, -45),
-  SouthEast: new Vector2(0, 45),
-  SouthWest: new Vector2(0, 135),
-  NorthWest: new Vector2(0, -135)
+import { BlockRegistry, CommandRegistry, ItemRegistry, V2 } from "modules";
+
+/**
+ * Predefined directional vectors for common orientations.
+ */
+export const DIRECTION = {
+  South: new V2(0, 0),
+  West: new V2(0, 90),
+  North: new V2(0, 180),
+  East: new V2(0, -90),
+  NorthEast: new V2(0, -45),
+  SouthEast: new V2(0, 45),
+  SouthWest: new V2(0, 135),
+  NorthWest: new V2(0, -135)
 };
+/**
+ * Predefined offsets for neighboring blocks in a 3D grid (26 neighbors).
+ */
+export const NEIGHBOR_OFFSETS_3D: number[][] = (() => {
+  const out: number[][] = [];
+  for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) if (dx || dy || dz) out.push([dx, dy, dz]);
+  return out;
+})();
 
 /**
  * Reference to the Minecraft world instance.

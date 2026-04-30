@@ -1,9 +1,9 @@
 import { BlockType, BlockTypes, Dimension, EntityTypes, world } from "@minecraft/server";
-import { Manager, Vector3 } from "mc-bedrock-lib";
+import { Manager, V3 } from "mc-bedrock-lib";
 
 export class OneBlock extends Manager {
   // Config
-  location = new Vector3(0, 0, 0);
+  location = new V3(0, 0, 0);
   private _spawnChance = 0.01;
 
   // State
@@ -152,7 +152,7 @@ export class OneBlock extends Manager {
       for (let y = -1; y <= 1; y++) {
         for (let z = -1; z <= 1; z++) {
           if (x === 0 && y === 0 && z === 0) continue;
-          const nearby = block.offset(new Vector3(x, y, z));
+          const nearby = block.offset(new V3(x, y, z));
           if (nearby && !nearby.isAir) return true;
         }
       }

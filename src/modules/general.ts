@@ -1,6 +1,6 @@
 import { lerp } from "utils";
-
-export class Vector2 {
+import type { Vector3 } from "@minecraft/server";
+export class V2 {
   x: number;
   y: number;
   constructor(x: number, y: number) {
@@ -12,37 +12,37 @@ export class Vector2 {
     return `${this.x} ${this.y}`;
   }
 
-  offset(value: Vector2 | { x: number; y: number }): Vector2 {
-    return new Vector2(this.x + value.x, this.y + value.y);
+  offset(value: V2 | { x: number; y: number }): V2 {
+    return new V2(this.x + value.x, this.y + value.y);
   }
 
   check(x: number, y: number): boolean {
     return this.x === x && this.y === y;
   }
 
-  normalized(): Vector2 {
+  normalized(): V2 {
     const length = Math.sqrt(this.x * this.x + this.y * this.y);
-    if (length === 0) return new Vector2(0, 0);
-    return new Vector2(this.x / length, this.y / length);
+    if (length === 0) return new V2(0, 0);
+    return new V2(this.x / length, this.y / length);
   }
 
-  static lerp(a: Vector2, b: Vector2, t: number) {
-    return new Vector2(lerp(a.x, b.x, t), lerp(a.y, b.y, t));
+  static lerp(a: V2, b: V2, t: number) {
+    return new V2(lerp(a.x, b.x, t), lerp(a.y, b.y, t));
   }
   static extend(v2: { x: number; y: number }) {
-    return new Vector2(v2.x, v2.y);
+    return new V2(v2.x, v2.y);
   }
 }
 
-export class Vector3 extends Vector2 {
+export class V3 extends V2 {
   z: number;
   constructor(x: number, y: number, z: number) {
     super(x as number, y as number);
     this.z = z as number;
   }
 
-  override offset(value: Vector3 | { x: number; y: number; z: number }): Vector3 {
-    return new Vector3(this.x + value.x, this.y + value.y, this.z + value.z);
+  override offset(value: V3 | Vector3): V3 {
+    return new V3(this.x + value.x, this.y + value.y, this.z + value.z);
   }
 
   check(x: number, y: number): boolean;
@@ -54,40 +54,40 @@ export class Vector3 extends Vector2 {
     return this.x === x && this.y === y && this.z === z;
   }
 
-  toVector2(): Vector2 {
-    return new Vector2(this.x, this.y);
+  toV2(): V2 {
+    return new V2(this.x, this.y);
   }
 
   toString(): string {
     return `${this.x} ${this.y} ${this.z}`;
   }
 
-  belowCenter(): Vector3 {
+  belowCenter(): V3 {
     const x = this._roundToNearestHalf(this.x);
     const y = this.y;
     const z = this._roundToNearestHalf(this.z);
-    return new Vector3(x, y, z);
+    return new V3(x, y, z);
   }
 
-  center(): Vector3 {
+  center(): V3 {
     const x = this._roundToNearestHalf(this.x);
     const y = this._roundToNearestHalf(this.y);
     const z = this._roundToNearestHalf(this.z);
-    return new Vector3(x, y, z);
+    return new V3(x, y, z);
   }
 
-  sizeCenter(): Vector3 {
+  sizeCenter(): V3 {
     const x = Math.floor(this.x / 2);
     const y = Math.floor(this.z / 2);
     const z = Math.floor(this.z / 2);
-    return new Vector3(x, y, z);
+    return new V3(x, y, z);
   }
 
-  sizeBelowCenter(): Vector3 {
+  sizeBelowCenter(): V3 {
     const x = Math.floor(this.x / 2);
     const y = 0;
     const z = Math.floor(this.z / 2);
-    return new Vector3(x, y, z);
+    return new V3(x, y, z);
   }
 
   rotate(angle: number) {
@@ -96,33 +96,33 @@ export class Vector3 extends Vector2 {
     const s = Math.sin(rad);
     const rx = this.x * c - this.z * s;
     const rz = this.x * s + this.z * c;
-    return new Vector3(rx, this.y, rz);
+    return new V3(rx, this.y, rz);
   }
 
   snapToBlockCenter() {
     const x = Math.floor(this.x) + 0.5;
     const y = Math.floor(this.y);
     const z = Math.floor(this.z) + 0.5;
-    return new Vector3(x, y, z);
+    return new V3(x, y, z);
   }
 
   private _roundToNearestHalf(value: number): number {
     return Math.round(value * 2) / 2;
   }
-  normalized(): Vector3 {
+  normalized(): V3 {
     const len = Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
-    if (len === 0) return new Vector3(0, 0, 0);
-    return new Vector3(this.x / len, this.y / len, this.z / len);
+    if (len === 0) return new V3(0, 0, 0);
+    return new V3(this.x / len, this.y / len, this.z / len);
   }
-  toVolume(vec: Vector3): Vector3 {
-    return new Vector3(Math.abs(this.x - vec.x), Math.abs(this.y - vec.y), Math.abs(this.z - vec.z));
+  toVolume(vec: V3): V3 {
+    return new V3(Math.abs(this.x - vec.x), Math.abs(this.y - vec.y), Math.abs(this.z - vec.z));
   }
 
-  static lerp(a: Vector3, b: Vector3, t: number) {
-    return new Vector3(lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t));
+  static lerp(a: V3, b: V3, t: number) {
+    return new V3(lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t));
   }
 
   static extend(v3: { x: number; y: number; z: number }) {
-    return new Vector3(v3.x, v3.y, v3.z);
+    return new V3(v3.x, v3.y, v3.z);
   }
 }

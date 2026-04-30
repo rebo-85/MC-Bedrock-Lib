@@ -20,7 +20,7 @@ After building, use the files in the `dist` folder and import them in your packs
 ```js
 import * as mbl from "mc-bedrock-lib";
 // or
-import { Vector3, Cutscene, world, system } from "mc-bedrock-lib";
+import { V3, Cutscene, world, system } from "mc-bedrock-lib";
 // or
 import "mc-bedrock-lib";
 ```
@@ -30,9 +30,9 @@ import "mc-bedrock-lib";
 ## Features
 
 - Extended prototypes for Player, Entity, World, Block, ItemStack, etc.
-- Utility classes: Vector2, Vector3, etc.
+- Utility classes: V2, V3, etc.
 - Custom events: entityJump, entitySneak, entityEquip, etc.
-- String parsing: `"@a[tag=admin]".toEQO()` `"12 34 56".toVector3()`
+- String parsing: `"@a[tag=admin]".toEQO()` `"12 34 56".toV3()`
 - Helpers: arraysEqual, objectsEqual, Math.randomInt(min, max)
 
 ---
@@ -40,13 +40,13 @@ import "mc-bedrock-lib";
 ## Example
 
 ```js
-import { worldAfterEvents, Vector3 } from "mc-bedrock-lib";
+import { worldAfterEvents, V3 } from "mc-bedrock-lib";
 
 worldAfterEvents.entityJump.subscribe((e) => {
   world.sendMessage(`${e.entity.typeId} jumped at ${e.entity.coordinates}`);
 });
 
-const pos = new Vector3(10, 64, 10);
+const pos = new V3(10, 64, 10);
 ```
 
 You can use mc-bedrock-lib to add custom properties to Minecraft modules. These helpers extend the original objects from @minecraft/server.
@@ -58,9 +58,7 @@ import { world, EntityComponentTypes, EquipmentSlot, ItemStack } from "@minecraf
 for (const player of world.getPlayers()) {
   player.onScreenDisplay.setTitleBar("Welcome!");
 
-  player
-    .getComponent(EntityComponentTypes.Inventory)
-    .setEquipment(EquipmentSlot.Mainhand, new ItemStack("minecraft:apple"));
+  player.getComponent(EntityComponentTypes.Inventory).setEquipment(EquipmentSlot.Mainhand, new ItemStack("minecraft:apple"));
 
   const result1 = player.runCommand("say 1");
   const result2 = player.runCommand("say 2");

@@ -25,6 +25,10 @@ export class Run {
   static job(gen: Generator<void, void, void>) {
     return new RunJob(gen);
   }
+
+  static next(cb: () => void) {
+    return new Run(cb);
+  }
 }
 
 export class RunInterval {

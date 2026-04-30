@@ -194,9 +194,13 @@ export class PlayerOnEquipAfterEventSignal extends PlayerEventSignal {
     for (const player of this.players) {
       const slots = Object.values(EquipmentSlot) as EquipmentSlot[];
       const currEquip = new Map<EquipmentSlot, ItemStack>();
-      for (const slot of slots) {
-        const item = player.getEquipment(slot);
-        if (item) currEquip.set(slot, item);
+      try {
+        for (const slot of slots) {
+          const item = player.getEquipment(slot);
+          if (item) currEquip.set(slot, item);
+        }
+      } catch (error) {
+        continue;
       }
 
       const prevEquip = this._prevEquip.get(player.id) || currEquip;
@@ -228,9 +232,13 @@ export class PlayerOnUnequipAfterEventSignal extends PlayerEventSignal {
     for (const player of this.players) {
       const slots = Object.values(EquipmentSlot) as EquipmentSlot[];
       const currEquip = new Map<EquipmentSlot, ItemStack>();
-      for (const slot of slots) {
-        const item = player.getEquipment(slot);
-        if (item) currEquip.set(slot, item);
+      try {
+        for (const slot of slots) {
+          const item = player.getEquipment(slot);
+          if (item) currEquip.set(slot, item);
+        }
+      } catch (error) {
+        continue;
       }
 
       const prevEquip = this._prevEquip.get(player.id);
@@ -273,8 +281,8 @@ export class PlayerXpOrbCollectAfterEventSignal extends PlayerEventSignal {
       if (entity.typeId !== PlayerXpOrbCollectAfterEventSignal.XP_ORB_ID) return;
 
       const plrXpData = new Map<string, XpData>();
-      for (const plr of this.players) {
-        plrXpData.set(plr.id, this._captureXpData(plr));
+      for (const player of this.players) {
+        plrXpData.set(player.id, this._captureXpData(player));
       }
       this._orbData.set(entity.id, plrXpData);
     });
@@ -285,36 +293,38 @@ export class PlayerXpOrbCollectAfterEventSignal extends PlayerEventSignal {
     });
   }
 
-  private _captureXpData(plr: Player): XpData {
+  private _captureXpData(player: Player): XpData {
     return {
-      level: plr.level,
-      xpEarnedAtCurrentLevel: plr.xpEarnedAtCurrentLevel,
-      totalXpNeededForNextLevel: plr.totalXpNeededForNextLevel
+      level: player.level,
+      xpEarnedAtCurrentLevel: player.xpEarnedAtCurrentLevel,
+      totalXpNeededForNextLevel: player.totalXpNeededForNextLevel
     };
   }
 
   private _handleOrbRemove(orb: Entity): void {
-    const plrXpBefore = this._orbData.get(orb.id);
-    if (!plrXpBefore) return;
+    const playerXpBefore = this._orbData.get(orb.id);
+    if (!playerXpBefore) return;
 
-    const plr = orb.dimension.getPlayers({
+    const player = orb.dimension.getPlayers({
       maxDistance: PlayerXpOrbCollectAfterEventSignal.COLLECT_DIST,
       location: orb.location,
       closest: 1
     })[0];
 
-    const xpBefore = plrXpBefore.get(plr.id);
+    if (!player) return;
+
+    const xpBefore = playerXpBefore.get(player.id);
     if (!xpBefore) return;
 
-    const xpAfter = this._captureXpData(plr);
+    const xpAfter = this._captureXpData(player);
     const xpVal = this._calcXpValue(xpBefore, xpAfter);
 
     if (xpVal > 0) {
-      const event = new PlayerXpOrbCollectAfterEvent(plr, xpVal);
-      this.events.set(plr.id, event);
+      const event = new PlayerXpOrbCollectAfterEvent(player, xpVal);
+      this.events.set(player.id, event);
 
       for (const plrData of this._orbData.values()) {
-        if (plrData.has(plr.id)) plrData.set(plr.id, xpAfter);
+        if (plrData.has(player.id)) plrData.set(player.id, xpAfter);
       }
     }
 

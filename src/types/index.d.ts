@@ -12,7 +12,7 @@ import {
   PlayerXpOrbCollectAfterEventSignal
 } from "../modules/events";
 
-import { Vector2, Vector3 } from "../modules/general";
+import { V2, V3 } from "../modules/general";
 
 /**
  * Extends the String prototype with utility methods for string manipulation and parsing.
@@ -23,10 +23,10 @@ declare global {
     toEQO(): EntityQueryOptions | undefined;
     /** Converts the string to title case, capitalizing the first letter of each word. */
     toTitleCase(): string;
-    /** Parses the string as a Vector2. Returns undefined if parsing fails. */
-    toVector2(): Vector2 | undefined;
-    /** Parses the string as a Vector3. Returns undefined if parsing fails. */
-    toVector3(): Vector3 | undefined;
+    /** Parses the string as a V2. Returns undefined if parsing fails. */
+    toV2(): V2 | undefined;
+    /** Parses the string as a V3. Returns undefined if parsing fails. */
+    toV3(): V3 | undefined;
   }
 
   /**
@@ -123,10 +123,10 @@ declare module "@minecraft/server" {
   interface Entity {
     /** The item in the chest slot. */
     chestItem: ItemStack | undefined;
-    /** The chunk position of the entity as a Vector3. */
-    readonly chunk: Vector3;
-    /** The entity's coordinates as a Vector3. */
-    readonly coordinates: Vector3;
+    /** The chunk position of the entity as a V3. */
+    readonly chunk: V3;
+    /** The entity's coordinates as a V3. */
+    readonly coordinates: V3;
     /** The X coordinate of the entity's chunk. */
     readonly cx: number;
     /** The Y coordinate of the entity's chunk. */
@@ -139,8 +139,8 @@ declare module "@minecraft/server" {
     feetItem: ItemStack | undefined;
     /** The item in the head slot. */
     headItem: ItemStack | undefined;
-    /** The position of the entity's head as a Vector3. */
-    readonly headLocation: Vector3;
+    /** The position of the entity's head as a V3. */
+    readonly headLocation: V3;
     /** The health of the entity, or undefined if not present. */
     health: number;
     /** The health component if the entity has health, otherwise undefined. */
@@ -181,8 +181,8 @@ declare module "@minecraft/server" {
     readonly ride: Entity | undefined;
     /** The riding component if the entity can ride, otherwise undefined. */
     readonly ridingComponent: EntityRidingComponent | undefined;
-    /** The entity's rotation as a Vector2. */
-    rotation: Vector2;
+    /** The entity's rotation as a V2. */
+    rotation: V2;
     /** The X rotation of the entity. */
     rx: number;
     /** The Y rotation of the entity. */
@@ -203,10 +203,10 @@ declare module "@minecraft/server" {
     readonly vdy: number;
     /** The Z component of the entity's velocity delta. */
     readonly vdz: number;
-    /** The entity's velocity as a Vector3. */
-    readonly velocity: Vector3;
-    /** The direction the entity is facing as a Vector3. */
-    readonly viewDirection: Vector3;
+    /** The entity's velocity as a V3. */
+    readonly velocity: V3;
+    /** The direction the entity is facing as a V3. */
+    readonly viewDirection: V3;
     /** The X component of the entity's velocity. */
     readonly vx: number;
     /** The Y component of the entity's velocity. */
@@ -231,8 +231,8 @@ declare module "@minecraft/server" {
     effectClear(effectType?: string | null): void;
     /** Gets the item equipped in the specified slot, or undefined. */
     getEquipment(slot: EquipmentSlot): ItemStack | undefined;
-    /** Returns a Vector3 offset in the direction the entity is facing, scaled by distance and optional offset. */
-    getFacingOffset(distance: number, offset?: Vector3): Vector3;
+    /** Returns a V3 offset in the direction the entity is facing, scaled by distance and optional offset. */
+    getFacingOffset(distance: number, offset?: V3): V3;
     /** Sets the item in the specified equipment slot. Returns true if successful. */
     setEquipment(slot: EquipmentSlot, item: ItemStack): boolean | undefined;
     /** Converts the entity to an ItemStack if possible. */

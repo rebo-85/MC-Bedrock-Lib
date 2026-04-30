@@ -1,4 +1,4 @@
-import { Vector3, Vector2 } from "./modules/index";
+import { V3, V2 } from "./modules/index";
 import { defineProperties } from "./utils";
 
 Math.randomInt = function (min: number, max: number): number {
@@ -15,42 +15,42 @@ defineProperties(String.prototype, {
         .split(" ")
         .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(" ");
-    },
+    }
   },
 
-  toVector2: {
-    value: function (): Vector2 | undefined {
+  toV2: {
+    value: function (): V2 | undefined {
       const pattern = (this as String).match(/^(\d+)\s(\d+)$/);
       if (pattern) {
         const x = parseInt(pattern[1]);
         const y = parseInt(pattern[2]);
-        return new Vector2(x, y);
+        return new V2(x, y);
       }
 
       switch ((this as String).toLowerCase()) {
         case "north":
-          return new Vector2(0, 180);
+          return new V2(0, 180);
         case "east":
-          return new Vector2(0, -90);
+          return new V2(0, -90);
         case "south":
-          return new Vector2(0, 0);
+          return new V2(0, 0);
         case "west":
-          return new Vector2(0, 90);
+          return new V2(0, 90);
         default:
           return;
       }
-    },
+    }
   },
 
-  toVector3: {
-    value: function (): Vector3 | undefined {
+  toV3: {
+    value: function (): V3 | undefined {
       const coordinates = (this as String).split(" ").map(parseFloat);
       if (coordinates.some(isNaN) || coordinates.length !== 3) {
         console.error('Invalid string format. It should be "x y z"');
         return;
       }
-      return new Vector3(coordinates[0], coordinates[1], coordinates[2]);
-    },
+      return new V3(coordinates[0], coordinates[1], coordinates[2]);
+    }
   },
 
   toEQO: {
@@ -175,8 +175,8 @@ defineProperties(String.prototype, {
         console.error(`"${this}" is not a valid selector.`);
         return;
       }
-    },
-  },
+    }
+  }
 });
 declare global {
   interface Map<K = any, V = any> {
@@ -189,6 +189,6 @@ defineProperties(Map.prototype, {
       (this as unknown as Map<any, any>).forEach((v: any, k: any) => {
         console.warn(`${k}, ${JSON.stringify(v)}`);
       });
-    },
-  },
+    }
+  }
 });

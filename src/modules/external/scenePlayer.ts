@@ -9,11 +9,11 @@ import {
   CustomCommandOrigin,
   CustomCommandStatus
 } from "@minecraft/server";
-import { Vector2, Vector3, CommandRegistry, Run, toCommandDecimal } from "mc-bedrock-lib";
+import { V2, V3, CommandRegistry, Run, toCommandDecimal } from "mc-bedrock-lib";
 
 export interface SceneFrame {
   time: number;
-  data_points: Vector3;
+  data_points: V3;
   interpolation?: string;
 }
 
@@ -107,10 +107,10 @@ class ScenePlayer {
     return null;
   }
 
-  private _setPlayerCamera(player: Player, actorEntity: Entity, framePos: Vector3, frameRot: Vector2, tickDelta: number) {
-    const rel = framePos.offset(new Vector3(-actorEntity.x, -actorEntity.y, -actorEntity.z));
+  private _setPlayerCamera(player: Player, actorEntity: Entity, framePos: V3, frameRot: V2, tickDelta: number) {
+    const rel = framePos.offset(new V3(-actorEntity.x, -actorEntity.y, -actorEntity.z));
     const rot = rel.rotate(actorEntity.ry);
-    const finalPos = rot.offset(Vector3.extend(actorEntity.location));
+    const finalPos = rot.offset(V3.extend(actorEntity.location));
     finalPos.z = -finalPos.z;
     const rx = -frameRot.x;
     const ry = -this._normalizeRotation(frameRot.y + actorEntity.ry);
@@ -120,7 +120,7 @@ class ScenePlayer {
     player.commandRun(cmd);
   }
 
-  private _resetPlayer(player: Player, prevGameMode: string, checkpoint: { location: Vector3; rotation: Vector2 }) {
+  private _resetPlayer(player: Player, prevGameMode: string, checkpoint: { location: V3; rotation: V2 }) {
     player.commandRun(
       "effect @s invisibility 0",
       "hud @s reset",
@@ -135,7 +135,7 @@ class ScenePlayer {
   private _runScene(dimension: Dimension, actor: Entity, players: Player[], sceneId: string) {
     if (this.activeScene) system.clearRun(this.activeScene);
     const playerGameModes = new Map<string, string>();
-    const playerCheckpoints = new Map<string, { location: Vector3; rotation: Vector2 }>();
+    const playerCheckpoints = new Map<string, { location: V3; rotation: V2 }>();
     const executedCommands = new Set<number>();
     const playedSounds = new Set<number>();
     const sceneData = this.scenes.get(sceneId);
@@ -144,8 +144,8 @@ class ScenePlayer {
     players.forEach((player: Player) => {
       playerGameModes.set(player.id, player.gamemode);
       playerCheckpoints.set(player.id, {
-        location: Vector3.extend(player.location),
-        rotation: Vector2.extend(player.rotation)
+        location: V3.extend(player.location),
+        rotation: V2.extend(player.rotation)
       });
       player.commandRun("camera @s clear", "effect @s invisibility infinite 1 true", "hud @s hide all", "gamemode spectator @s");
       player.ipCamera = false;
@@ -166,7 +166,7 @@ class ScenePlayer {
       sceneData.commands.forEach((cmd) => this._handleCommand(dimension, cmd, executedCommands, tick, 0.05));
       const currentSound = this._handleSound(sceneData, tick, playedSounds, 0.05);
       players.forEach((player: Player) => {
-        player.teleport(framePos, { rotation: new Vector2(frameRot.x, frameRot.y) });
+        player.teleport(framePos, { rotation: new V2(frameRot.x, frameRot.y) });
         this._setPlayerCamera(player, actor, framePos, frameRot, tickDelta);
         if (currentSound) currentSound.data_points.forEach((snd: string) => player.playSound(snd));
       });
@@ -204,24 +204,24 @@ class ScenePlayer {
 
   private _calculateFramePosition(actorEntity: Entity, tick: number, sceneData: SceneData) {
     const keyframes = sceneData.positions || [];
-    if (!keyframes.length) return Vector3.extend(actorEntity.location);
+    if (!keyframes.length) return V3.extend(actorEntity.location);
     const [startFrame, endFrame] = this._getKeyframes(keyframes, tick);
-    const posStart = Vector3.extend(startFrame.data_points).offset(Vector3.extend(actorEntity.location));
-    const posEnd = Vector3.extend(endFrame.data_points).offset(Vector3.extend(actorEntity.location));
-    if (!startFrame || !endFrame) return Vector3.extend(actorEntity.location);
+    const posStart = V3.extend(startFrame.data_points).offset(V3.extend(actorEntity.location));
+    const posEnd = V3.extend(endFrame.data_points).offset(V3.extend(actorEntity.location));
+    if (!startFrame || !endFrame) return V3.extend(actorEntity.location);
     const tNorm = (tick - startFrame.time) / (endFrame.time - startFrame.time);
     const eased = this._easeTime(tNorm, startFrame.interpolation || "linear");
-    return Vector3.lerp(posStart, posEnd, eased);
+    return V3.lerp(posStart, posEnd, eased);
   }
 
   private _calculateFrameRotation(actorEntity: Entity, tick: number, sceneData: SceneData) {
     const keyframes = sceneData.rotations || [];
-    if (!keyframes.length) return Vector2.extend(actorEntity.rotation);
+    if (!keyframes.length) return V2.extend(actorEntity.rotation);
     const [startFrame, endFrame] = this._getKeyframes(keyframes, tick);
-    if (!startFrame || !endFrame) return Vector2.extend(actorEntity.rotation);
+    if (!startFrame || !endFrame) return V2.extend(actorEntity.rotation);
     const tNorm = (tick - startFrame.time) / (endFrame.time - startFrame.time);
     const eased = this._easeTime(tNorm, startFrame.interpolation || "linear");
-    return Vector2.lerp(startFrame.data_points, endFrame.data_points, eased);
+    return V2.lerp(startFrame.data_points, endFrame.data_points, eased);
   }
 }
 

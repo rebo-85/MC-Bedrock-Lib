@@ -1,5 +1,5 @@
 import { EquipmentSlot, world, Player, Block, BlockComponentTickEvent } from "@minecraft/server";
-import { Manager, Run, Vector3, PlayerManager, blockRegistry } from "mc-bedrock-lib";
+import { Manager, Run, V3, PlayerManager, blockRegistry } from "mc-bedrock-lib";
 
 blockRegistry.add("bluepearl:light_block", {
   onTick(ev: BlockComponentTickEvent) {
@@ -51,9 +51,9 @@ class DynamicLight extends Manager {
     const py = Number(loc.y);
     const pz = Number(loc.z);
 
-    const center = new Vector3(px, py, pz);
+    const center = new V3(px, py, pz);
     const dimension = player.dimension;
-    const location = center.offset(new Vector3(0, 1, 0));
+    const location = center.offset(new V3(0, 1, 0));
 
     const lightableBlocksIds = ["minecraft:air", "bluepearl:light_block"];
     const isLightable = (b?: Block) => {
@@ -79,7 +79,7 @@ class DynamicLight extends Manager {
     for (let dx = -radius; dx <= radius; dx++) {
       for (let dy = -radius; dy <= radius; dy++) {
         for (let dz = -radius; dz <= radius; dz++) {
-          const pos = new Vector3(px + dx, py + 1 + dy, pz + dz);
+          const pos = new V3(px + dx, py + 1 + dy, pz + dz);
           try {
             const nb = dimension.getBlock(pos as any) as Block;
             if (isLightable(nb)) {

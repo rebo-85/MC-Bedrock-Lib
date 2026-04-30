@@ -57,7 +57,7 @@ import {
   PlayerXpOrbCollectAfterEventSignal
 } from "./modules/index";
 
-import { Vector3, Vector2 } from "./modules/index";
+import { V3, V2 } from "./modules/index";
 
 import { arraysEqual, defineProperties, createDimGetter, createPlayersGetter } from "./utils";
 import { playersUsingItem, weatherData } from "./events";
@@ -342,7 +342,7 @@ defineProperties(Block.prototype, {
         [1, 1, 0],
         [1, 1, 1]
       ];
-      return ofs.map(([dx, dy, dz]) => (this as Block).offset(new Vector3(dx, dy, dz))).filter((b): b is Block => b !== undefined);
+      return ofs.map(([dx, dy, dz]) => (this as Block).offset(new V3(dx, dy, dz))).filter((b): b is Block => b !== undefined);
     }
   },
   getAllStates: {
@@ -623,13 +623,13 @@ defineProperties(Entity.prototype, {
     }
   },
   chunk: {
-    get: function (): Vector3 {
-      return new Vector3(Math.floor((this as Entity).x / 16), Math.floor((this as Entity).y / 16), Math.floor((this as Entity).z / 16));
+    get: function (): V3 {
+      return new V3(Math.floor((this as Entity).x / 16), Math.floor((this as Entity).y / 16), Math.floor((this as Entity).z / 16));
     }
   },
   coordinates: {
-    get: function (): Vector3 {
-      return new Vector3(Math.floor((this as Entity).x), Math.floor((this as Entity).y), Math.floor((this as Entity).z));
+    get: function (): V3 {
+      return new V3(Math.floor((this as Entity).x), Math.floor((this as Entity).y), Math.floor((this as Entity).z));
     },
     enumerable: true
   },
@@ -674,8 +674,8 @@ defineProperties(Entity.prototype, {
     }
   },
   headLocation: {
-    get: function (): Vector3 {
-      return Vector3.extend((this as Entity).getHeadLocation());
+    get: function (): V3 {
+      return V3.extend((this as Entity).getHeadLocation());
     },
     enumerable: true
   },
@@ -812,10 +812,10 @@ defineProperties(Entity.prototype, {
     enumerable: true
   },
   rotation: {
-    get: function (): Vector2 {
-      return Vector2.extend((this as Entity).getRotation());
+    get: function (): V2 {
+      return V2.extend((this as Entity).getRotation());
     },
-    set: function (rotation: Vector2) {
+    set: function (rotation: V2) {
       (this as Entity).setRotation(rotation);
     },
     enumerable: true
@@ -891,14 +891,14 @@ defineProperties(Entity.prototype, {
     enumerable: true
   },
   velocity: {
-    get: function (): Vector3 {
-      return Vector3.extend((this as Entity).getVelocity());
+    get: function (): V3 {
+      return V3.extend((this as Entity).getVelocity());
     },
     enumerable: true
   },
   viewDirection: {
-    get: function (): Vector3 {
-      return Vector3.extend((this as Entity).getViewDirection());
+    get: function (): V3 {
+      return V3.extend((this as Entity).getViewDirection());
     },
     enumerable: true
   },
@@ -967,17 +967,17 @@ defineProperties(Entity.prototype, {
     }
   },
   getFacingOffset: {
-    value: function (distance: number, offset: Vector3 = new Vector3(0, 0, 0)): Vector3 {
-      const view_dir = Vector3.extend((this as Entity).viewDirection);
-      const right_dir = new Vector3(-view_dir.z, 0, view_dir.x);
+    value: function (distance: number, offset: V3 = new V3(0, 0, 0)): V3 {
+      const view_dir = V3.extend((this as Entity).viewDirection);
+      const right_dir = new V3(-view_dir.z, 0, view_dir.x);
       const normalized_right_dir = right_dir.normalized();
       const end = {
         x: view_dir.x * distance + normalized_right_dir.x * offset.x + offset.z,
         y: view_dir.y * distance + offset.y,
         z: view_dir.z * distance + normalized_right_dir.z * offset.x + offset.z
       };
-      const headLoc = Vector3.extend((this as Entity).headLocation);
-      return headLoc.offset(Vector3.extend(end));
+      const headLoc = V3.extend((this as Entity).headLocation);
+      return headLoc.offset(V3.extend(end));
     }
   },
   setEquipment: {

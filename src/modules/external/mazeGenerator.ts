@@ -1,13 +1,13 @@
 import { Dimension } from "@minecraft/server";
-import { Vector3, Edge, Vector2 } from "mc-bedrock-lib";
+import { V3, Edge, V2 } from "mc-bedrock-lib";
 
 interface MazeOptions {
   entranceEdge?: Edge;
   entranceCoord?: number;
-  entrance?: Vector2;
+  entrance?: V2;
   exitEdge?: Edge;
   exitCoord?: number;
-  exit?: Vector2;
+  exit?: V2;
   loopDensity?: number;
 }
 
@@ -303,7 +303,7 @@ export class MazeGenerator {
     return this._grid;
   }
 
-  generate(wdim: Dimension, loc: Vector3, size: Vector3, blockType: string, opts: MazeOptions = {}): void {
+  generate(wdim: Dimension, loc: V3, size: V3, blockType: string, opts: MazeOptions = {}): void {
     const air = "minecraft:air";
 
     if (opts.entranceEdge && opts.entranceCoord != null) {
