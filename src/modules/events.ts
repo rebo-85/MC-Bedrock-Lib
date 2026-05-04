@@ -22,6 +22,8 @@ export class PlayerJumpAfterEvent extends PlayerAfterEvent {}
 
 export class PlayerOnAirJumpAfterEvent extends PlayerAfterEvent {}
 
+export class PlayerDoubleSneakAfterEvent extends PlayerAfterEvent {}
+
 export class PlayerXpOrbCollectAfterEvent extends PlayerAfterEvent {
   constructor(
     player: Player,
@@ -76,7 +78,9 @@ export class EventSignal {
   subscribe(cb: (e: any) => void): void {
     this.init();
     const process = () => {
-      this.main(cb);
+      try {
+        this.main(cb);
+      } catch {}
       if (!this.disposed) this.process = system.run(process);
     };
     this.process = system.run(process);
@@ -181,6 +185,51 @@ export class PlayerOnAirJumpAfterEventSignal extends PlayerEventSignal {
         cb(event);
         this.events.delete(player.id);
       }
+    }
+  }
+}
+
+export class PlayerDoubleSneakAfterEventSignal extends PlayerEventSignal {
+  private _sneakTimes: Map<string, number> = new Map();
+  private _wasSneaking: Map<string, boolean> = new Map();
+  private _cooldowns: Map<string, number> = new Map();
+
+  private readonly THRESHOLD_MS = 400;
+  private readonly MIN_MS = 10;
+  private readonly COOLDOWN_MS = 500;
+
+  protected main(cb: (e: PlayerDoubleSneakAfterEvent) => void): void {
+    if (!this.isInit) return;
+
+    const now = Date.now();
+    for (const player of this.players) {
+      let isSneaking: boolean;
+      try {
+        isSneaking = player.isSneaking;
+      } catch {
+        continue;
+      }
+      const wasSneaking = this._wasSneaking.get(player.id) || false;
+
+      if (isSneaking && !wasSneaking) {
+        const lastSneak = this._sneakTimes.get(player.id) || 0;
+        const diff = now - lastSneak;
+
+        if (lastSneak && diff < this.THRESHOLD_MS && diff > this.MIN_MS) {
+          const lastAct = this._cooldowns.get(player.id) || 0;
+          if (now - lastAct >= this.COOLDOWN_MS) {
+            const event = new PlayerDoubleSneakAfterEvent(player);
+            this.events.set(player.id, event);
+            cb(event);
+            this._cooldowns.set(player.id, now);
+          }
+          this._sneakTimes.delete(player.id);
+        } else {
+          this._sneakTimes.set(player.id, now);
+        }
+      }
+
+      this._wasSneaking.set(player.id, isSneaking!);
     }
   }
 }

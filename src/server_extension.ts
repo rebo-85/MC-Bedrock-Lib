@@ -1,8 +1,16 @@
 import {
   Block,
   BlockComponentTypes,
+  BlockFluidContainerComponent,
   BlockInventoryComponent,
+  BlockMapColorComponent,
+  BlockMovableComponent,
   BlockPermutation,
+  BlockPistonComponent,
+  BlockPrecipitationInteractionsComponent,
+  BlockRecordPlayerComponent,
+  BlockRedstoneProducerComponent,
+  BlockSignComponent,
   BlockTypes,
   Container,
   CustomCommandOrigin,
@@ -29,10 +37,16 @@ import {
   HudElement,
   HudVisibility,
   InputPermissionCategory,
+  ItemBookComponent,
   ItemComponentTypes,
+  ItemCompostableComponent,
+  ItemCooldownComponent,
   ItemDurabilityComponent,
+  ItemDyeableComponent,
   ItemEnchantableComponent,
+  ItemFoodComponent,
   ItemInventoryComponent,
+  ItemPotionComponent,
   ItemStack,
   Player,
   RawMessage,
@@ -48,6 +62,7 @@ import {
   EntityOnGroundAfterEventSignal,
   EntitySneakAfterEventSignal,
   EntityUnsneakAfterEventSignal,
+  PlayerDoubleSneakAfterEventSignal,
   PlayerJumpAfterEventSignal,
   PlayerOnAirJumpAfterEventSignal,
   PlayerOnEquipAfterEventSignal,
@@ -81,6 +96,11 @@ defineProperties(WorldAfterEvents.prototype, {
   entityUnsneak: {
     get: function (): EntityUnsneakAfterEventSignal {
       return new EntityUnsneakAfterEventSignal();
+    }
+  },
+  playerDoubleSneak: {
+    get: function (): PlayerDoubleSneakAfterEventSignal {
+      return new PlayerDoubleSneakAfterEventSignal();
     }
   },
   playerJump: {
@@ -168,6 +188,24 @@ defineProperties(World.prototype, {
 // ============================================================================
 
 defineProperties(ItemStack.prototype, {
+  bookComponent: {
+    get: function (): ItemBookComponent | undefined {
+      return (this as ItemStack).getComponent(ItemComponentTypes.Book);
+    },
+    enumerable: true
+  },
+  compostableComponent: {
+    get: function (): ItemCompostableComponent | undefined {
+      return (this as ItemStack).getComponent(ItemComponentTypes.Compostable);
+    },
+    enumerable: true
+  },
+  cooldownComponent: {
+    get: function (): ItemCooldownComponent | undefined {
+      return (this as ItemStack).getComponent(ItemComponentTypes.Cooldown);
+    },
+    enumerable: true
+  },
   damage: {
     get: function (): number {
       return (this as ItemStack).durabilityComponent?.damage ?? 0;
@@ -210,6 +248,12 @@ defineProperties(ItemStack.prototype, {
     },
     enumerable: true
   },
+  dyeableComponent: {
+    get: function (): ItemDyeableComponent | undefined {
+      return (this as ItemStack).getComponent(ItemComponentTypes.Dyeable);
+    },
+    enumerable: true
+  },
   enchantableComponent: {
     get: function (): ItemEnchantableComponent | undefined {
       return (this as ItemStack).getComponent(ItemComponentTypes.Enchantable);
@@ -222,6 +266,12 @@ defineProperties(ItemStack.prototype, {
     },
     enumerable: true
   },
+  foodComponent: {
+    get: function (): ItemFoodComponent | undefined {
+      return (this as ItemStack).getComponent(ItemComponentTypes.Food);
+    },
+    enumerable: true
+  },
   inventory: {
     get: function (): Container | undefined {
       return (this as ItemStack).inventoryComponent?.container;
@@ -230,7 +280,8 @@ defineProperties(ItemStack.prototype, {
   inventoryComponent: {
     get: function (): ItemInventoryComponent | undefined {
       return (this as ItemStack).getComponent(ItemComponentTypes.Inventory);
-    }
+    },
+    enumerable: true
   },
   isVanillaBlock: {
     get: function (): boolean {
@@ -240,6 +291,12 @@ defineProperties(ItemStack.prototype, {
   maxDurability: {
     get: function (): number {
       return (this as ItemStack).durabilityComponent?.maxDurability ?? 0;
+    },
+    enumerable: true
+  },
+  potionComponent: {
+    get: function (): ItemPotionComponent | undefined {
+      return (this as ItemStack).getComponent(ItemComponentTypes.Potion);
     },
     enumerable: true
   },
@@ -277,6 +334,11 @@ defineProperties(ItemStack.prototype, {
       return (this as ItemStack).enchantableComponent?.getEnchantment(enchantmentType);
     }
   },
+  getEnchantments: {
+    value: function (): Enchantment[] {
+      return (this as ItemStack).enchantableComponent?.getEnchantments() ?? [];
+    }
+  },
   hasEnchantment: {
     value: function (enchantmentType: EnchantmentType | string): boolean {
       return !!(this as ItemStack).enchantableComponent?.hasEnchantment(enchantmentType);
@@ -299,6 +361,12 @@ defineProperties(ItemStack.prototype, {
 // ============================================================================
 
 defineProperties(Block.prototype, {
+  fluidContainerComponent: {
+    get: function (): BlockFluidContainerComponent | undefined {
+      return (this as Block).getComponent(BlockComponentTypes.FluidContainer);
+    },
+    enumerable: true
+  },
   inventory: {
     get: function (): Container | undefined {
       return (this as Block).inventoryComponent?.container;
@@ -308,6 +376,48 @@ defineProperties(Block.prototype, {
   inventoryComponent: {
     get: function (): BlockInventoryComponent | undefined {
       return (this as Block).getComponent(BlockComponentTypes.Inventory);
+    },
+    enumerable: true
+  },
+  mapColorComponent: {
+    get: function (): BlockMapColorComponent | undefined {
+      return (this as Block).getComponent(BlockComponentTypes.MapColor);
+    },
+    enumerable: true
+  },
+  movableComponent: {
+    get: function (): BlockMovableComponent | undefined {
+      return (this as Block).getComponent(BlockComponentTypes.Movable);
+    },
+    enumerable: true
+  },
+  pistonComponent: {
+    get: function (): BlockPistonComponent | undefined {
+      return (this as Block).getComponent(BlockComponentTypes.Piston);
+    },
+    enumerable: true
+  },
+  precipitationInteractionsComponent: {
+    get: function (): BlockPrecipitationInteractionsComponent | undefined {
+      return (this as Block).getComponent(BlockComponentTypes.PrecipitationInteractions);
+    },
+    enumerable: true
+  },
+  recordPlayerComponent: {
+    get: function (): BlockRecordPlayerComponent | undefined {
+      return (this as Block).getComponent(BlockComponentTypes.RecordPlayer);
+    },
+    enumerable: true
+  },
+  redstoneProducerComponent: {
+    get: function (): BlockRedstoneProducerComponent | undefined {
+      return (this as Block).getComponent(BlockComponentTypes.RedstoneProducer);
+    },
+    enumerable: true
+  },
+  signComponent: {
+    get: function (): BlockSignComponent | undefined {
+      return (this as Block).getComponent(BlockComponentTypes.Sign);
     },
     enumerable: true
   },

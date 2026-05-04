@@ -6,6 +6,7 @@ import {
   EntityUnsneakAfterEventSignal,
   PlayerJumpAfterEventSignal,
   PlayerOnAirJumpAfterEventSignal,
+  PlayerDoubleSneakAfterEventSignal,
   PlayerOnEquipAfterEventSignal,
   PlayerOnLandAfterEventSignal,
   PlayerOnUnequipAfterEventSignal,
@@ -58,6 +59,8 @@ declare module "@minecraft/server" {
     readonly playerStartJumping: PlayerStartJumpingAfterEventSignal;
     /** Signal triggered when a player stops jumping. */
     readonly playerStopJumping: PlayerStopJumpingAfterEventSignal;
+    /** Signal triggered when a player double-sneaks (two quick sneaks). */
+    readonly playerDoubleSneak: PlayerDoubleSneakAfterEventSignal;
     /** Signal triggered when a player collects an xp orb. */
     readonly playerXpOrbCollect: PlayerXpOrbCollectAfterEventSignal;
   }
@@ -240,16 +243,26 @@ declare module "@minecraft/server" {
   }
 
   interface ItemStack {
+    /** The book component for this item stack. */
+    readonly bookComponent: ItemBookComponent | undefined;
+    /** The compostable component for this item stack. */
+    readonly compostableComponent: ItemCompostableComponent | undefined;
+    /** The cooldown component for this item stack. */
+    readonly cooldownComponent: ItemCooldownComponent | undefined;
     /** The current damage value of this item stack. */
     damage: number;
     /** The current durability value of this item stack. */
     durability: number;
     /** The durability component for this item stack. */
-    readonly durabilityComponent: ItemDurabilityComponent;
+    readonly durabilityComponent: ItemDurabilityComponent | undefined;
+    /** The dyeable component for this item stack. */
+    readonly dyeableComponent: ItemDyeableComponent | undefined;
     /** The enchantable component for this item stack. */
-    readonly enchantableComponent: ItemEnchantableComponent;
+    readonly enchantableComponent: ItemEnchantableComponent | undefined;
     /** The available enchantment slots for this item stack, or undefined. */
     readonly enchantmentSlots: EnchantmentSlot[] | undefined;
+    /** The food component for this item stack, or undefined if not a food item. */
+    readonly foodComponent: ItemFoodComponent | undefined;
     /** The inventory container this item stack is in, or undefined. */
     readonly inventory: Container | undefined;
     /** The inventory component for this item stack, or undefined. */
@@ -258,6 +271,8 @@ declare module "@minecraft/server" {
     readonly isVanillaBlock: boolean;
     /** The maximum durability value of this item stack. */
     maxDurability: number;
+    /** The potion component for this item stack, or undefined if not a potion item. */
+    readonly potionComponent: ItemPotionComponent | undefined;
 
     /** Adds one or more enchantments to this item stack. */
     addEnchantment(...enchantments: Enchantment[]): void;
@@ -265,6 +280,8 @@ declare module "@minecraft/server" {
     compare(itemStack: ItemStack | null | undefined): boolean;
     /** Gets a specific enchantment from this item stack, or undefined. */
     getEnchantment(enchantmentType: EnchantmentType): Enchantment | undefined;
+    /** Gets all enchantments currently on this item stack. */
+    getEnchantments(): Enchantment[];
     /** Checks if this item stack has a specific enchantment. */
     hasEnchantment(enchantmentType: EnchantmentType | string): boolean;
     /** Removes all enchantments from this item stack. */
@@ -285,10 +302,26 @@ declare module "@minecraft/server" {
   }
 
   interface Block {
+    /** The block's fluid container component, if present. */
+    readonly fluidContainerComponent: BlockFluidContainerComponent | undefined;
     /** The inventory container for this block, or undefined. */
     readonly inventory: Container | undefined;
     /** The inventory component for this block, if present. */
     readonly inventoryComponent: any;
+    /** The block's map color component, if present. */
+    readonly mapColorComponent: BlockMapColorComponent | undefined;
+    /** The block's movable component, if present. */
+    readonly movableComponent: BlockMovableComponent | undefined;
+    /** The block's piston component, if present. */
+    readonly pistonComponent: BlockPistonComponent | undefined;
+    /** The block's precipitation interactions component, if present. */
+    readonly precipitationInteractionsComponent: BlockPrecipitationInteractionsComponent | undefined;
+    /** The block's record player component, if present. */
+    readonly recordPlayerComponent: BlockRecordPlayerComponent | undefined;
+    /** The block's redstone producer component, if present. */
+    readonly redstoneProducerComponent: BlockRedstoneProducerComponent | undefined;
+    /** The block's sign component, if present. */
+    readonly signComponent: BlockSignComponent | undefined;
     /** Returns an array of blocks adjacent to this block. */
     getAdjacentBlocks(): Block[];
     /** Returns an object containing all block states and their values. */

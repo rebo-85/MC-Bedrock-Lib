@@ -40,7 +40,8 @@ export class PlayerManager extends Manager {
     });
 
     world.beforeEvents.playerLeave.subscribe((e) => {
-      this._players = this._players.filter((p) => p.id !== e.player.id);
+      const idx = this._players.findIndex((p) => p.id === e.player.id);
+      if (idx !== -1) this._players.splice(idx, 1);
     });
   }
 }
